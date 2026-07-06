@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12141c">
-<title>AI 가계부 · 카드 알림 자동 분류 (iOS)</title>
+<title>AI 가계부 · Android 알림 자동 분류</title>
 <style>
   :root{
     --ink:#12141c;
@@ -155,52 +155,6 @@
   .simulate-btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
   .simulate-btn[disabled]{opacity:.55;cursor:default;}
 
-  /* SMS thread mock */
-  .sms-wrap{max-height:0;overflow:hidden;transition:max-height .35s ease;}
-  .sms-wrap.show{max-height:220px;}
-  .sms-thread{margin-top:14px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;}
-  .sms-sender{font-size:11px;color:var(--text-faint);font-weight:600;padding-left:2px;}
-  .sms-bubble{
-    background:var(--surface-2);border:1px solid var(--border);
-    border-radius:16px 16px 16px 4px;padding:10px 13px;
-    font-size:12.5px;line-height:1.55;color:var(--text);
-    white-space:pre-wrap;max-width:92%;
-  }
-  .share-btn{
-    display:inline-flex;align-items:center;gap:6px;
-    background:none;border:1px solid var(--border);color:var(--accent);
-    font-size:12.5px;font-weight:700;padding:7px 13px;border-radius:20px;
-    cursor:pointer;transition:transform .12s ease, background-color .15s ease;
-  }
-  .share-btn:active{transform:scale(.96);background-color:var(--accent-soft);}
-  .share-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-
-  /* Share sheet (iOS share sheet mimic) */
-  .share-icons-row{display:flex;gap:16px;overflow-x:auto;padding:6px 2px 16px;margin-top:10px;}
-  .share-icon-item{
-    display:flex;flex-direction:column;align-items:center;gap:6px;flex:none;width:58px;
-    background:none;border:none;cursor:pointer;padding:0;color:inherit;
-  }
-  .share-icon-item:active{transform:scale(.94);}
-  .share-icon-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:16px;}
-  .share-icon-circle{
-    width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;
-    background:var(--surface-2);border:1px solid var(--border);font-size:21px;
-  }
-  .share-icon-circle.app{
-    background:linear-gradient(135deg,var(--accent),#c97f1f);color:#241a06;
-    font-weight:800;font-size:15px;letter-spacing:.02em;
-    box-shadow:0 0 0 2px var(--accent-soft),0 10px 22px -8px rgba(232,163,61,.7);
-  }
-  .share-icon-label{font-size:10.5px;color:var(--text-dim);text-align:center;line-height:1.25;}
-  .share-actions-list{display:flex;flex-direction:column;border-top:1px solid var(--border);}
-  .share-action-row{
-    background:none;border:none;border-bottom:1px solid var(--border);
-    text-align:left;padding:13px 4px;font-size:13.5px;color:var(--text);cursor:pointer;
-  }
-  .share-action-row:last-child{border-bottom:none;}
-  .share-action-row:active{opacity:.55;}
-
   /* Incoming notification mimic — real top-banner style */
   .notif-banner{
     position:absolute;top:8px;left:8px;right:8px;z-index:40;
@@ -225,7 +179,7 @@
   }
   .incoming-icon-app{font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.02em;}
   .incoming-icon-msg{background:rgba(79,199,89,.16);border-color:rgba(79,199,89,.35);font-size:16px;}
-  .incoming-sms-text{font-size:12.5px;color:var(--text);margin-top:5px;line-height:1.5;white-space:pre-wrap;}
+  .incoming-banner-text{font-size:12.5px;color:var(--text);margin-top:5px;line-height:1.5;white-space:pre-wrap;}
   .incoming-body{flex:1;min-width:0;}
   .incoming-head{display:flex;justify-content:space-between;align-items:baseline;}
   .incoming-app{font-size:12.5px;font-weight:700;color:var(--text-dim);}
@@ -349,7 +303,7 @@
               <span class="incoming-app">AI 가계부</span>
               <span class="incoming-time" id="incTime">방금</span>
             </div>
-            <div class="incoming-line-bold">문자에서 결제 내역을 감지했어요</div>
+            <div class="incoming-line-bold">알림에서 결제 내역을 자동으로 감지했어요</div>
             <div class="incoming-line" id="incAmountLine"></div>
             <div class="incoming-merchant" id="incMerchant"></div>
             <div class="incoming-cumulative" id="incCumulative"></div>
@@ -367,11 +321,11 @@
         <div class="app-bar-row">
           <div class="app-bar-title-group">
             <span class="app-bar-title">AI 가계부</span>
-            <span class="app-bar-tag">MVP · iOS</span>
+            <span class="app-bar-tag">MVP · Android</span>
           </div>
-          <a href="android.html" class="platform-switch">🤖 Android →</a>
+          <a href="index.html" class="platform-switch">🍎 iOS →</a>
         </div>
-        <span class="app-bar-sub">카드 승인 문자를 공유하면 자동으로 분류해드려요</span>
+        <span class="app-bar-sub">카드 알림을 자동으로 감지해서 분류해드려요</span>
       </div>
 
       <div class="app-body">
@@ -401,24 +355,12 @@
 
         <div class="screen-pane hidden" id="testScreen">
           <div class="card">
-            <div class="section-title">문자메시지<span class="hint">테스트용 시뮬레이션</span></div>
-            <button class="simulate-btn" id="smsBtn" type="button">새 카드 승인 문자 받기</button>
-
-            <div class="sms-wrap" id="smsWrap">
-              <div class="sms-thread">
-                <div class="sms-sender">현대카드 (1588-6700)</div>
-                <div class="sms-bubble" id="smsBubble"></div>
-                <button class="share-btn" id="shareBtn" type="button">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                  공유하기
-                </button>
-              </div>
-            </div>
-
-            <p style="margin:10px 2px 0;font-size:12px;color:var(--text-faint);line-height:1.5;">받은 문자를 공유하면, AI 가계부가 내용을 읽어 가맹점을 분석하고 자동으로(또는 처음이면 직접 선택해) 분류해요. 홈 화면에서 결과를 확인해보세요.</p>
+            <div class="section-title">현대카드 알림<span class="hint">테스트용 시뮬레이션</span></div>
+            <button class="simulate-btn" id="smsBtn" type="button">새 현대카드 알림 받기</button>
+            <p style="margin:10px 2px 0;font-size:12px;color:var(--text-faint);line-height:1.5;">Android는 알림 접근 권한으로 카드 알림을 자동으로 읽어요. 사용자가 아무것도 하지 않아도 AI 가계부가 알아서 분석하고 분류해요. 홈 화면에서 결과를 확인해보세요.</p>
           </div>
 
-          <div class="footnote">* MVP 범위 데모입니다 (현대카드 문자 포맷만 지원). iOS는 알림을 직접 읽을 수 없어, 실제 서비스에서는 문자를 iOS 공유 시트로 앱에 전달하는 Share Extension 방식으로 동일하게 동작해요. 이 화면은 테스트를 위한 것으로, 실제 서비스에는 없어요.</div>
+          <div class="footnote">* MVP 범위 데모입니다 (현대카드 알림 포맷만 지원). 실제 서비스에서는 Android 알림 접근 권한(NotificationListenerService)으로 이 화면과 동일하게 자동 동작해요. 이 화면은 테스트를 위한 것으로, 실제 서비스에는 없어요.</div>
           <button type="button" class="reset-link" id="resetBtn">데모 데이터 초기화</button>
         </div>
       </div>
@@ -448,35 +390,6 @@
   </div>
 </div>
 
-<div class="sheet-overlay" id="shareSheetOverlay">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">공유하기</div>
-    <div class="sheet-sub" id="shareSheetPreview">문자 내용을 앱으로 전달합니다</div>
-    <div class="share-icons-row">
-      <button class="share-icon-item" type="button" data-inert="true">
-        <span class="share-icon-circle">📡</span>
-        <span class="share-icon-label">AirDrop</span>
-      </button>
-      <button class="share-icon-item" type="button" data-inert="true">
-        <span class="share-icon-circle">💬</span>
-        <span class="share-icon-label">메시지</span>
-      </button>
-      <button class="share-icon-item" type="button" data-inert="true">
-        <span class="share-icon-circle">📝</span>
-        <span class="share-icon-label">메모</span>
-      </button>
-      <button class="share-icon-item" id="shareToAppBtn" type="button">
-        <span class="share-icon-circle app">AI</span>
-        <span class="share-icon-label">AI 가계부</span>
-      </button>
-    </div>
-    <div class="share-actions-list">
-      <button class="share-action-row" type="button" data-inert="true">복사하기</button>
-      <button class="share-action-row" type="button" data-inert="true">즐겨찾기에 추가</button>
-    </div>
-  </div>
-</div>
 
 <div class="sheet-overlay" id="resetConfirmOverlay">
   <div class="sheet">
@@ -635,7 +548,7 @@
     document.getElementById('ledgerCount').textContent = sorted.length ? '최근 '+sorted.length+'건' : '';
     list.innerHTML = '';
     if(!sorted.length){
-      list.innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);padding:4px 2px;">아직 내역이 없어요. "테스트" 탭에서 카드 승인 문자를 받아보세요.</div>';
+      list.innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);padding:4px 2px;">아직 내역이 없어요. "테스트" 탭에서 현대카드 알림을 받아보세요.</div>';
     }
     sorted.forEach(function(t){
       var c = catByKey[t.category] || catByKey.etc;
@@ -702,23 +615,22 @@
   }
 
   var busy = false;
-  var pendingItem = null;
 
-  function formatSmsText(item){
+  function formatCardAlertText(item){
     var previewCumulative = cardCumulative + item.amount;
-    return '[Web발신]\n현대카드승인 회원님\n' + won(item.amount) + ' 일시불 ' + formatClock(new Date().toISOString()) +
+    return '회원님, 현대카드 M BOOST 승인\n' + won(item.amount) + ' 일시불 ' + formatClock(new Date().toISOString()) +
       '\n' + item.merchant + '\n누적' + won(previewCumulative);
   }
 
-  function renderSmsBannerTemplate(item){
+  function renderCardAlertBannerTemplate(item){
     var card = document.querySelector('#notifBanner .incoming-card');
     card.innerHTML =
-      '<div class="incoming-icon incoming-icon-msg">💬</div>' +
+      '<div class="incoming-icon incoming-icon-msg">💳</div>' +
       '<div class="incoming-body">' +
-        '<div class="incoming-head"><span class="incoming-app">현대카드 (1588-6700)</span><span class="incoming-time">방금</span></div>' +
-        '<div class="incoming-sms-text" id="incSmsText"></div>' +
+        '<div class="incoming-head"><span class="incoming-app">현대카드</span><span class="incoming-time">방금</span></div>' +
+        '<div class="incoming-banner-text" id="incBannerText"></div>' +
       '</div>';
-    document.getElementById('incSmsText').textContent = formatSmsText(item);
+    document.getElementById('incBannerText').textContent = formatCardAlertText(item);
   }
 
   function renderAiBannerTemplate(){
@@ -727,7 +639,7 @@
       '<div class="incoming-icon incoming-icon-app">AI</div>' +
       '<div class="incoming-body">' +
         '<div class="incoming-head"><span class="incoming-app">AI 가계부</span><span class="incoming-time" id="incTime">방금</span></div>' +
-        '<div class="incoming-line-bold">문자에서 결제 내역을 감지했어요</div>' +
+        '<div class="incoming-line-bold">알림에서 결제 내역을 자동으로 감지했어요</div>' +
         '<div class="incoming-line" id="incAmountLine"></div>' +
         '<div class="incoming-merchant" id="incMerchant"></div>' +
         '<div class="incoming-cumulative" id="incCumulative"></div>' +
@@ -735,7 +647,7 @@
       '</div>';
   }
 
-  function receiveSms(){
+  function receiveCardAlert(){
     if(busy) return;
     busy = true;
     var btn = document.getElementById('smsBtn');
@@ -744,44 +656,24 @@
     var item = ALERT_QUEUE[queueIdx % ALERT_QUEUE.length];
     queueIdx++;
     save('ail_queue_idx', queueIdx);
-    pendingItem = item;
 
-    showSmsBanner(item);
+    showCardAlertBanner(item);
   }
 
-  function showSmsBanner(item){
+  function showCardAlertBanner(item){
     var banner = document.getElementById('notifBanner');
-    renderSmsBannerTemplate(item);
+    renderCardAlertBannerTemplate(item);
     banner.classList.add('show');
 
     setTimeout(function(){
       banner.classList.remove('show');
       setTimeout(function(){
-        document.getElementById('smsBubble').textContent = formatSmsText(item);
-        document.getElementById('smsWrap').classList.add('show');
+        processCardAlert(item);
       }, 400);
     }, 2200);
   }
 
-  function openShareSheet(){
-    if(!pendingItem) return;
-    document.getElementById('shareSheetPreview').textContent = pendingItem.merchant + ' · ' + won(pendingItem.amount);
-    document.getElementById('shareSheetOverlay').classList.add('open');
-  }
-  function closeShareSheet(){
-    document.getElementById('shareSheetOverlay').classList.remove('open');
-  }
-
-  function shareToApp(){
-    var item = pendingItem;
-    if(!item) return;
-    closeShareSheet();
-    document.getElementById('smsWrap').classList.remove('show');
-    showToast('AI 가계부로 전달했어요');
-    processSharedMessage(item);
-  }
-
-  function processSharedMessage(item){
+  function processCardAlert(item){
     var banner = document.getElementById('notifBanner');
     var btn = document.getElementById('smsBtn');
     renderAiBannerTemplate();
@@ -802,7 +694,6 @@
         setTimeout(function(){
           finalize(item, known);
           banner.classList.remove('show');
-          pendingItem = null;
           btn.disabled = false;
           busy = false;
         }, 900);
@@ -817,7 +708,6 @@
           setTimeout(function(){
             finalize(item, catKey);
             banner.classList.remove('show');
-            pendingItem = null;
             btn.disabled = false;
             busy = false;
           }, 900);
@@ -826,20 +716,10 @@
     }, 750);
   }
 
-  document.getElementById('smsBtn').addEventListener('click', receiveSms);
-  document.getElementById('shareBtn').addEventListener('click', openShareSheet);
-  document.getElementById('shareToAppBtn').addEventListener('click', shareToApp);
-  document.querySelectorAll('#shareSheetOverlay [data-inert="true"]').forEach(function(el){
-    el.addEventListener('click', function(){ showToast('데모에서는 비활성화된 옵션이에요'); });
-  });
+  document.getElementById('smsBtn').addEventListener('click', receiveCardAlert);
   document.getElementById('sheetOverlay').addEventListener('click', function(e){
     if(e.target === document.getElementById('sheetOverlay')){
       closeSheet();
-    }
-  });
-  document.getElementById('shareSheetOverlay').addEventListener('click', function(e){
-    if(e.target === document.getElementById('shareSheetOverlay')){
-      closeShareSheet();
     }
   });
 
@@ -896,13 +776,10 @@
     cardCumulative = 0;
     range = defaultRange();
 
-    pendingItem = null;
     busy = false;
     document.getElementById('smsBtn').disabled = false;
-    document.getElementById('smsWrap').classList.remove('show');
     document.getElementById('notifBanner').classList.remove('show');
     closeSheet();
-    closeShareSheet();
 
     document.getElementById('rangeStart').value = range.start;
     document.getElementById('rangeEnd').value = range.end;
