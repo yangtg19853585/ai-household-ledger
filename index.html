@@ -91,7 +91,21 @@
     font-size:36px;font-weight:800;letter-spacing:-.03em;margin-top:6px;
     font-variant-numeric:tabular-nums;
   }
-  .hero-range{font-size:12px;color:var(--text-faint);margin-top:4px;}
+  .range-control{display:flex;align-items:center;gap:7px;margin-top:10px;flex-wrap:wrap;}
+  .range-input{
+    color-scheme:dark;
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+    border-radius:9px;padding:6px 8px;font-size:12px;font-family:inherit;
+    font-variant-numeric:tabular-nums;
+  }
+  .range-input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .range-sep{font-size:12px;color:var(--text-faint);}
+  .range-reset{
+    background:none;border:1px solid var(--border);color:var(--text-dim);
+    border-radius:20px;padding:6px 10px;font-size:11.5px;font-weight:600;
+    cursor:pointer;margin-left:auto;transition:background-color .15s ease;
+  }
+  .range-reset:active{background-color:var(--surface-2);}
   .summary-track{
     display:flex;height:9px;border-radius:6px;overflow:hidden;margin-top:16px;
     background:var(--surface-2);gap:2px;
@@ -190,6 +204,8 @@
     display:flex;align-items:center;justify-content:center;
   }
   .incoming-icon-app{font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.02em;}
+  .incoming-icon-msg{background:rgba(79,199,89,.16);border-color:rgba(79,199,89,.35);font-size:16px;}
+  .incoming-sms-text{font-size:12.5px;color:var(--text);margin-top:5px;line-height:1.5;white-space:pre-wrap;}
   .incoming-body{flex:1;min-width:0;}
   .incoming-head{display:flex;justify-content:space-between;align-items:baseline;}
   .incoming-app{font-size:12.5px;font-weight:700;color:var(--text-dim);}
@@ -231,6 +247,12 @@
   .ledger-amount{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;flex:none;}
 
   .footnote{font-size:11px;color:var(--text-faint);text-align:center;line-height:1.6;padding:2px 6px;}
+  .reset-link{
+    display:block;margin:2px auto 0;background:none;border:none;
+    color:var(--text-faint);font-size:11.5px;text-decoration:underline;
+    text-underline-offset:2px;cursor:pointer;padding:8px;
+  }
+  .reset-link:active{color:var(--danger,#ff6b5d);}
 
   /* Bottom sheet */
   .sheet-overlay{
@@ -321,14 +343,19 @@
 
       <div class="app-body">
         <div class="card">
-          <div class="hero-label">최근 30일 총 지출</div>
+          <div class="hero-label" id="heroLabel">총 지출</div>
           <div class="hero-amount" id="heroAmount">0원</div>
-          <div class="hero-range" id="heroRange"></div>
+          <div class="range-control">
+            <input type="date" class="range-input" id="rangeStart" aria-label="시작일">
+            <span class="range-sep">~</span>
+            <input type="date" class="range-input" id="rangeEnd" aria-label="종료일">
+            <button type="button" class="range-reset" id="rangeResetBtn">최근 30일</button>
+          </div>
           <div class="summary-track" id="summaryTrack"></div>
         </div>
 
         <div class="card">
-          <div class="section-title">카테고리별 소비<span class="hint">최근 30일</span></div>
+          <div class="section-title">카테고리별 소비<span class="hint" id="chartHint">최근 30일</span></div>
           <div class="chart-rows" id="chartRows"></div>
         </div>
 
@@ -356,6 +383,7 @@
         </div>
 
         <div class="footnote">* MVP 범위 데모입니다 (현대카드 문자 포맷만 지원). iOS는 알림을 직접 읽을 수 없어, 실제 서비스에서는 문자를 iOS 공유 시트로 앱에 전달하는 Share Extension 방식으로 동일하게 동작해요.</div>
+        <button type="button" class="reset-link" id="resetBtn">데모 데이터 초기화</button>
       </div>
     </div>
   </div>
@@ -474,6 +502,22 @@
   var queueIdx = load('ail_queue_idx', 0);
   var cardCumulative = load('ail_cumulative', transactions.reduce(function(s,t){return s+t.amount;}, 0));
 
+  function toDateInputValue(d){
+    var y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    return y + '-' + m + '-' + day;
+  }
+  function parseDateInputValue(v){
+    var p = v.split('-').map(Number);
+    return new Date(p[0], p[1]-1, p[2]);
+  }
+  function defaultRange(){
+    var end = new Date();
+    var start = new Date();
+    start.setDate(start.getDate() - 29);
+    return {start: toDateInputValue(start), end: toDateInputValue(end)};
+  }
+  var range = load('ail_range', null) || defaultRange();
+
   function won(n){ return n.toLocaleString('ko-KR') + '원'; }
 
   function formatRelative(iso){
@@ -497,22 +541,27 @@
     return mm + '/' + dd + ' ' + ampm + ' ' + h12 + ':' + (m < 10 ? '0'+m : m);
   }
 
-  function last30(){
-    var cutoff = Date.now() - 30*24*60*60*1000;
-    return transactions.filter(function(t){ return new Date(t.time).getTime() >= cutoff; });
+  function txInRange(){
+    var s = parseDateInputValue(range.start).getTime();
+    var endDay = parseDateInputValue(range.end);
+    endDay.setHours(23,59,59,999);
+    var e = endDay.getTime();
+    return transactions.filter(function(t){
+      var tm = new Date(t.time).getTime();
+      return tm >= s && tm <= e;
+    });
   }
 
   function renderTotalsAndChart(){
-    var recent = last30();
+    var recent = txInRange();
     var total = recent.reduce(function(s,t){ return s+t.amount; }, 0);
 
     var heroEl = document.getElementById('heroAmount');
     heroEl.textContent = won(total);
 
-    var now = new Date();
-    var from = new Date(Date.now() - 29*24*60*60*1000);
-    document.getElementById('heroRange').textContent =
-      (from.getMonth()+1)+'월 '+from.getDate()+'일 – '+(now.getMonth()+1)+'월 '+now.getDate()+'일';
+    var spanDays = Math.round((parseDateInputValue(range.end) - parseDateInputValue(range.start)) / 86400000) + 1;
+    document.getElementById('heroLabel').textContent = spanDays + '일간 총 지출';
+    document.getElementById('chartHint').textContent = spanDays + '일간';
 
     var sums = {};
     CATEGORIES.forEach(function(c){ sums[c.key] = 0; });
@@ -634,6 +683,31 @@
       '\n' + item.merchant + '\n누적' + won(previewCumulative);
   }
 
+  function renderSmsBannerTemplate(item){
+    var card = document.querySelector('#notifBanner .incoming-card');
+    card.innerHTML =
+      '<div class="incoming-icon incoming-icon-msg">💬</div>' +
+      '<div class="incoming-body">' +
+        '<div class="incoming-head"><span class="incoming-app">현대카드 (1588-6700)</span><span class="incoming-time">방금</span></div>' +
+        '<div class="incoming-sms-text" id="incSmsText"></div>' +
+      '</div>';
+    document.getElementById('incSmsText').textContent = formatSmsText(item);
+  }
+
+  function renderAiBannerTemplate(){
+    var card = document.querySelector('#notifBanner .incoming-card');
+    card.innerHTML =
+      '<div class="incoming-icon incoming-icon-app">AI</div>' +
+      '<div class="incoming-body">' +
+        '<div class="incoming-head"><span class="incoming-app">AI 가계부</span><span class="incoming-time" id="incTime">방금</span></div>' +
+        '<div class="incoming-line-bold">문자에서 결제 내역을 감지했어요</div>' +
+        '<div class="incoming-line" id="incAmountLine"></div>' +
+        '<div class="incoming-merchant" id="incMerchant"></div>' +
+        '<div class="incoming-cumulative" id="incCumulative"></div>' +
+        '<div class="incoming-status" id="incStatus"></div>' +
+      '</div>';
+  }
+
   function receiveSms(){
     if(busy) return;
     busy = true;
@@ -645,8 +719,21 @@
     save('ail_queue_idx', queueIdx);
     pendingItem = item;
 
-    document.getElementById('smsBubble').textContent = formatSmsText(item);
-    document.getElementById('smsWrap').classList.add('show');
+    showSmsBanner(item);
+  }
+
+  function showSmsBanner(item){
+    var banner = document.getElementById('notifBanner');
+    renderSmsBannerTemplate(item);
+    banner.classList.add('show');
+
+    setTimeout(function(){
+      banner.classList.remove('show');
+      setTimeout(function(){
+        document.getElementById('smsBubble').textContent = formatSmsText(item);
+        document.getElementById('smsWrap').classList.add('show');
+      }, 400);
+    }, 2200);
   }
 
   function openShareSheet(){
@@ -670,6 +757,7 @@
   function processSharedMessage(item){
     var banner = document.getElementById('notifBanner');
     var btn = document.getElementById('smsBtn');
+    renderAiBannerTemplate();
     document.getElementById('incTime').textContent = '방금';
     document.getElementById('incAmountLine').textContent = won(item.amount) + ' 일시불 · ' + formatClock(new Date().toISOString());
     document.getElementById('incMerchant').textContent = item.merchant;
@@ -728,6 +816,36 @@
     }
   });
 
+  function applyRangeInputs(){
+    var startInput = document.getElementById('rangeStart');
+    var endInput = document.getElementById('rangeEnd');
+    var s = startInput.value, e = endInput.value;
+    if(!s || !e) return;
+    if(parseDateInputValue(s) > parseDateInputValue(e)){
+      if(this === startInput) endInput.value = s; else startInput.value = e;
+    }
+    range = {start: startInput.value, end: endInput.value};
+    save('ail_range', range);
+    renderTotalsAndChart();
+  }
+  document.getElementById('rangeStart').addEventListener('change', applyRangeInputs);
+  document.getElementById('rangeEnd').addEventListener('change', applyRangeInputs);
+  document.getElementById('rangeResetBtn').addEventListener('click', function(){
+    range = defaultRange();
+    document.getElementById('rangeStart').value = range.start;
+    document.getElementById('rangeEnd').value = range.end;
+    save('ail_range', range);
+    renderTotalsAndChart();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    if(!window.confirm('모든 데모 데이터를 초기화할까요? 저장된 내역과 분류 기록이 모두 사라져요.')) return;
+    ['ail_merchant_map','ail_transactions','ail_queue_idx','ail_cumulative','ail_range'].forEach(function(k){
+      localStorage.removeItem(k);
+    });
+    location.reload();
+  });
+
   function tickClock(){
     var d = new Date();
     var h = d.getHours(), m = d.getMinutes();
@@ -736,8 +854,12 @@
   tickClock();
   setInterval(tickClock, 30000);
 
+  document.getElementById('rangeStart').value = range.start;
+  document.getElementById('rangeEnd').value = range.end;
+
   save('ail_merchant_map', merchantMap);
   save('ail_transactions', transactions);
+  save('ail_range', range);
   renderTotalsAndChart();
   renderLedger();
 })();
