@@ -220,6 +220,21 @@
   .ledger-time{font-size:11px;color:var(--text-faint);}
   .ledger-amount{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;flex:none;}
 
+  .merchant-map-list{display:flex;flex-direction:column;gap:2px;}
+  .merchant-map-item{
+    display:flex;align-items:center;gap:10px;padding:10px 4px;
+    border-bottom:1px solid var(--border);
+  }
+  .merchant-map-item:last-child{border-bottom:none;}
+  .merchant-map-name{flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .merchant-map-cat{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:20px;flex:none;}
+  .merchant-map-forget{
+    background:none;border:1px solid var(--border);color:var(--text-faint);
+    font-size:11px;font-weight:600;padding:5px 10px;border-radius:16px;
+    cursor:pointer;flex:none;transition:background-color .15s ease;
+  }
+  .merchant-map-forget:active{background-color:var(--surface-2);}
+
   .footnote{font-size:11px;color:var(--text-faint);text-align:center;line-height:1.6;padding:2px 6px;}
   .reset-link{
     display:block;margin:2px auto 0;background:none;border:none;
@@ -260,6 +275,11 @@
   .chip-btn:active{transform:scale(.96);}
   .chip-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .chip-dot{width:9px;height:9px;border-radius:50%;flex:none;}
+  .remember-row{
+    display:flex;align-items:center;gap:9px;margin-top:16px;padding:2px;cursor:pointer;
+  }
+  .remember-row input[type="checkbox"]{width:17px;height:17px;flex:none;accent-color:var(--accent);}
+  .remember-row span{font-size:12.5px;color:var(--text-dim);}
 
   /* Confirm sheet */
   .confirm-actions{display:flex;gap:10px;margin-top:18px;}
@@ -360,6 +380,11 @@
             <p style="margin:10px 2px 0;font-size:12px;color:var(--text-faint);line-height:1.5;">Android는 알림 접근 권한으로 카드 알림을 자동으로 읽어요. 사용자가 아무것도 하지 않아도 AI 가계부가 알아서 분석하고 분류해요. 홈 화면에서 결과를 확인해보세요.</p>
           </div>
 
+          <div class="card" id="merchantMapCard" style="display:none;">
+            <div class="section-title">가맹점 자동분류 설정<span class="hint">탭해서 해제</span></div>
+            <div class="merchant-map-list" id="merchantMapList" style="margin-top:10px;"></div>
+          </div>
+
           <div class="footnote">* MVP 범위 데모입니다 (현대카드 알림 포맷만 지원). 실제 서비스에서는 Android 알림 접근 권한(NotificationListenerService)으로 이 화면과 동일하게 자동 동작해요. 이 화면은 테스트를 위한 것으로, 실제 서비스에는 없어요.</div>
           <button type="button" class="reset-link" id="resetBtn">데모 데이터 초기화</button>
         </div>
@@ -381,12 +406,16 @@
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">처음 보는 가맹점이에요</div>
-    <div class="sheet-sub">이 알림을 어떤 카테고리로 분류할까요? 한 번 고르면 다음부터 자동으로 분류돼요.</div>
+    <div class="sheet-sub">이 알림을 어떤 카테고리로 분류할까요?</div>
     <div class="sheet-preview">
       <span class="sheet-preview-name" id="sheetMerchant">-</span>
       <span class="sheet-preview-amount" id="sheetAmount">-</span>
     </div>
     <div class="sheet-grid" id="sheetGrid"></div>
+    <label class="remember-row" for="rememberMerchant">
+      <input type="checkbox" id="rememberMerchant" checked>
+      <span>다음부터 이 가맹점은 자동으로 분류 (편의점·쿠팡처럼 매번 다르면 해제하세요)</span>
+    </label>
   </div>
 </div>
 
@@ -569,6 +598,46 @@
     });
   }
 
+  function renderMerchantMapList(){
+    var entries = Object.keys(merchantMap).sort();
+    var card = document.getElementById('merchantMapCard');
+    var list = document.getElementById('merchantMapList');
+    list.innerHTML = '';
+    if(!entries.length){ card.style.display = 'none'; return; }
+    card.style.display = '';
+    entries.forEach(function(merchant){
+      var c = catByKey[merchantMap[merchant]] || catByKey.etc;
+      var row = document.createElement('div');
+      row.className = 'merchant-map-item';
+
+      var nameEl = document.createElement('span');
+      nameEl.className = 'merchant-map-name';
+      nameEl.textContent = merchant;
+
+      var catEl = document.createElement('span');
+      catEl.className = 'merchant-map-cat';
+      catEl.style.background = c.color + '22';
+      catEl.style.color = c.color;
+      catEl.textContent = c.label;
+
+      var forgetBtn = document.createElement('button');
+      forgetBtn.type = 'button';
+      forgetBtn.className = 'merchant-map-forget';
+      forgetBtn.textContent = '해제';
+      forgetBtn.addEventListener('click', function(){
+        delete merchantMap[merchant];
+        save('ail_merchant_map', merchantMap);
+        showToast(merchant + ' · 다음부터 다시 물어볼게요');
+        renderMerchantMapList();
+      });
+
+      row.appendChild(nameEl);
+      row.appendChild(catEl);
+      row.appendChild(forgetBtn);
+      list.appendChild(row);
+    });
+  }
+
   function showToast(msg){
     var t = document.getElementById('toast');
     t.textContent = msg;
@@ -580,6 +649,7 @@
   function openSheet(item, onPick){
     document.getElementById('sheetMerchant').textContent = item.merchant;
     document.getElementById('sheetAmount').textContent = won(item.amount);
+    document.getElementById('rememberMerchant').checked = true;
     var grid = document.getElementById('sheetGrid');
     grid.innerHTML = '';
     CATEGORIES.forEach(function(c){
@@ -588,8 +658,9 @@
       btn.className = 'chip-btn';
       btn.innerHTML = '<span class="chip-dot" style="background:'+c.color+'"></span>'+c.label;
       btn.addEventListener('click', function(){
+        var remember = document.getElementById('rememberMerchant').checked;
         closeSheet();
-        onPick(c.key);
+        onPick(c.key, remember);
       });
       grid.appendChild(btn);
     });
@@ -699,12 +770,19 @@
         }, 900);
       } else {
         status.innerHTML = '<span style="color:var(--accent);">👆 새로운 가맹점 — 카테고리를 선택해주세요</span>';
-        openSheet(item, function(catKey){
+        openSheet(item, function(catKey, remember){
           var c = catByKey[catKey];
           status.innerHTML = '<span class="resolved-chip" style="background:'+c.color+'22;color:'+c.color+'">● '+c.label+'로 저장됨</span>';
-          merchantMap[item.merchant] = catKey;
-          save('ail_merchant_map', merchantMap);
-          showToast('저장 완료 · 다음부터 자동 분류돼요');
+          if(remember){
+            merchantMap[item.merchant] = catKey;
+            save('ail_merchant_map', merchantMap);
+            renderMerchantMapList();
+            showToast('저장 완료 · 다음부터 자동 분류돼요');
+          } else {
+            delete merchantMap[item.merchant];
+            save('ail_merchant_map', merchantMap);
+            showToast('이번만 적용했어요 · 다음에도 물어볼게요');
+          }
           setTimeout(function(){
             finalize(item, catKey);
             banner.classList.remove('show');
@@ -787,6 +865,7 @@
     document.getElementById('resetConfirmOverlay').classList.remove('open');
     renderTotalsAndChart();
     renderLedger();
+    renderMerchantMapList();
     showToast('초기화됐어요');
     showTab('home');
   });
@@ -807,6 +886,7 @@
   save('ail_range', range);
   renderTotalsAndChart();
   renderLedger();
+  renderMerchantMapList();
 })();
 </script>
 </body>
