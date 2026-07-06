@@ -510,8 +510,8 @@
 <div class="sheet-overlay" id="resetConfirmOverlay">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">모든 데모 데이터를 초기화할까요?</div>
-    <div class="sheet-sub">저장된 내역, 카테고리 분류 기록, 기간 설정이 모두 사라지고 처음 상태(0원)로 돌아가요.</div>
+    <div class="sheet-title">홈 화면 데이터를 초기화할까요?</div>
+    <div class="sheet-sub">저장된 내역과 기간 설정이 사라지고 처음 상태(0원)로 돌아가요. "가맹점 자동분류 설정"은 그대로 유지돼요.</div>
     <div class="confirm-actions">
       <button type="button" class="confirm-btn cancel" id="resetCancelBtn">취소</button>
       <button type="button" class="confirm-btn danger" id="resetConfirmBtn">초기화</button>
@@ -964,11 +964,10 @@
     }
   });
   document.getElementById('resetConfirmBtn').addEventListener('click', function(){
-    ['ail_merchant_map','ail_transactions','ail_queue_idx','ail_cumulative','ail_range'].forEach(function(k){
+    ['ail_transactions','ail_queue_idx','ail_cumulative','ail_range'].forEach(function(k){
       localStorage.removeItem(k);
     });
 
-    merchantMap = {};
     transactions = [];
     queueIdx = 0;
     cardCumulative = 0;
