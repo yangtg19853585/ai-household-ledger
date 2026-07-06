@@ -883,7 +883,29 @@
     ['ail_merchant_map','ail_transactions','ail_queue_idx','ail_cumulative','ail_range'].forEach(function(k){
       localStorage.removeItem(k);
     });
-    location.reload();
+
+    merchantMap = {};
+    transactions = [];
+    queueIdx = 0;
+    cardCumulative = 0;
+    range = defaultRange();
+
+    pendingItem = null;
+    busy = false;
+    document.getElementById('smsBtn').disabled = false;
+    document.getElementById('smsWrap').classList.remove('show');
+    document.getElementById('notifBanner').classList.remove('show');
+    closeSheet();
+    closeShareSheet();
+
+    document.getElementById('rangeStart').value = range.start;
+    document.getElementById('rangeEnd').value = range.end;
+
+    document.getElementById('resetConfirmOverlay').classList.remove('open');
+    renderTotalsAndChart();
+    renderLedger();
+    showToast('초기화됐어요');
+    showTab('home');
   });
 
   function tickClock(){
