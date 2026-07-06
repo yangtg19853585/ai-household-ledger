@@ -126,6 +126,43 @@
     cursor:pointer;margin-left:auto;transition:background-color .15s ease;
   }
   .range-reset:active{background-color:var(--surface-2);}
+
+  /* Budget */
+  .hint-btn{
+    background:none;border:none;color:var(--accent);font-size:11.5px;font-weight:700;
+    cursor:pointer;padding:0;
+  }
+  .budget-empty{font-size:12.5px;color:var(--text-faint);margin-top:10px;line-height:1.5;}
+  .budget-row{margin-top:14px;}
+  .budget-row:first-child{margin-top:10px;}
+  .budget-row-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;font-weight:600;margin-bottom:6px;}
+  .budget-row-top .amt{font-variant-numeric:tabular-nums;color:var(--text-dim);}
+  .budget-row-top .amt.over{color:var(--danger);font-weight:700;}
+  .budget-track{height:8px;border-radius:5px;background:var(--surface-2);overflow:hidden;}
+  .budget-fill{height:100%;border-radius:5px;width:0%;transition:width .5s ease;}
+  .budget-over-text{font-size:11px;color:var(--danger);margin-top:4px;font-weight:600;}
+
+  /* Insights */
+  .insight-item{padding:10px 12px;border-radius:12px;font-size:12.5px;line-height:1.5;margin-top:8px;}
+  .insight-item:first-child{margin-top:0;}
+  .insight-item.danger{background:rgba(255,107,93,.14);color:#ffb3a8;}
+  .insight-item.warn{background:rgba(232,163,61,.14);color:var(--accent);}
+  .insight-item.info{background:var(--surface-2);color:var(--text-dim);}
+
+  /* Budget settings sheet */
+  .budget-input-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:11px 2px;border-bottom:1px solid var(--border);
+  }
+  .budget-input-row:last-child{border-bottom:none;}
+  .budget-input-label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;}
+  .budget-input{
+    width:120px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+    border-radius:9px;padding:8px 9px;font-size:13px;text-align:right;
+    font-variant-numeric:tabular-nums;font-family:inherit;
+  }
+  .budget-input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .incoming-icon-warn{background:rgba(255,107,93,.16);border-color:rgba(255,107,93,.4);font-size:16px;}
   .summary-track{
     display:flex;height:9px;border-radius:6px;overflow:hidden;margin-top:16px;
     background:var(--surface-2);gap:2px;
@@ -409,8 +446,18 @@
           </div>
 
           <div class="card">
+            <div class="section-title">예산<button type="button" class="hint-btn" id="budgetSettingsBtn">설정</button></div>
+            <div id="budgetSummary"></div>
+          </div>
+
+          <div class="card">
             <div class="section-title">카테고리별 소비<span class="hint" id="chartHint">최근 30일</span></div>
             <div class="chart-rows" id="chartRows"></div>
+          </div>
+
+          <div class="card">
+            <div class="section-title">절약 인사이트<span class="hint">AI 분석</span></div>
+            <div id="insightsList"></div>
           </div>
 
           <div class="card">
@@ -511,11 +558,25 @@
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">홈 화면 데이터를 초기화할까요?</div>
-    <div class="sheet-sub">저장된 내역과 기간 설정이 사라지고 처음 상태(0원)로 돌아가요. "가맹점 자동분류 설정"은 그대로 유지돼요.</div>
+    <div class="sheet-sub">저장된 내역과 기간 설정이 사라지고 처음 상태(0원)로 돌아가요. "가맹점 자동분류 설정"과 "예산 설정"은 그대로 유지돼요.</div>
     <div class="confirm-actions">
       <button type="button" class="confirm-btn cancel" id="resetCancelBtn">취소</button>
       <button type="button" class="confirm-btn danger" id="resetConfirmBtn">초기화</button>
     </div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="budgetSheetOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">예산 설정</div>
+    <div class="sheet-sub">목표 예산을 넘으면 알림으로 알려드려요. 비워두면 그 항목은 확인하지 않아요.</div>
+    <div class="budget-input-row">
+      <span class="budget-input-label">이번 기간 총 예산</span>
+      <input type="number" inputmode="numeric" class="budget-input" id="budgetTotalInput" placeholder="예: 1000000">
+    </div>
+    <div id="budgetCategoryInputs"></div>
+    <button type="button" class="simulate-btn" id="budgetSaveBtn" style="margin-top:16px;">저장</button>
   </div>
 </div>
 
@@ -570,6 +631,7 @@
     return {start: toDateInputValue(start), end: toDateInputValue(end)};
   }
   var range = load('ail_range', null) || defaultRange();
+  var budgets = load('ail_budgets', {total: null, byCategory: {}});
 
   function won(n){ return n.toLocaleString('ko-KR') + '원'; }
 
@@ -655,6 +717,84 @@
       rows.querySelectorAll('.chart-fill').forEach(function(el){
         el.style.width = el.getAttribute('data-w') + '%';
       });
+    });
+
+    renderBudgetCard(total, sums);
+    renderInsights(total, sums);
+  }
+
+  function budgetBar(label, amount, budget){
+    var pct = Math.min(100, Math.round(amount/budget*100));
+    var over = amount > budget;
+    var barColor = over ? 'var(--danger)' : (pct >= 80 ? 'var(--accent)' : 'var(--good)');
+    var html =
+      '<div class="budget-row">' +
+        '<div class="budget-row-top"><span>'+label+'</span><span class="amt'+(over?' over':'')+'">'+won(amount)+' / '+won(budget)+'</span></div>' +
+        '<div class="budget-track"><div class="budget-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div>';
+    if(over){
+      html += '<div class="budget-over-text">예산보다 '+won(amount-budget)+' 더 썼어요</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderBudgetCard(total, sums){
+    var el = document.getElementById('budgetSummary');
+    var catKeys = Object.keys(budgets.byCategory).filter(function(k){ return budgets.byCategory[k] > 0; });
+    if(!budgets.total && !catKeys.length){
+      el.innerHTML = '<p class="budget-empty">예산을 설정하면 초과할 때 알려드려요.</p>';
+      return;
+    }
+    var html = '';
+    if(budgets.total){
+      html += budgetBar('총 예산', total, budgets.total);
+    }
+    catKeys.forEach(function(key){
+      var c = catByKey[key];
+      if(!c) return;
+      html += budgetBar(c.label, sums[key] || 0, budgets.byCategory[key]);
+    });
+    el.innerHTML = html;
+  }
+
+  function renderInsights(total, sums){
+    var list = document.getElementById('insightsList');
+    var tips = [];
+
+    Object.keys(budgets.byCategory).forEach(function(key){
+      var b = budgets.byCategory[key];
+      if(!b) return;
+      var amt = sums[key] || 0;
+      var c = catByKey[key];
+      if(!c) return;
+      if(amt > b){
+        tips.push({level:'danger', text: c.label + ' 예산을 ' + won(amt - b) + ' 초과했어요. 줄여보는 건 어떨까요?'});
+      } else if(amt >= b * 0.8){
+        tips.push({level:'warn', text: c.label + ' 예산의 ' + Math.round(amt/b*100) + '%를 사용했어요. 남은 기간 동안 조절해보세요.'});
+      }
+    });
+
+    if(!tips.length && total > 0){
+      var top = Object.keys(sums)
+        .map(function(k){ return {key:k, amount: sums[k]}; })
+        .sort(function(a,b){ return b.amount - a.amount; })[0];
+      if(top && top.amount > 0 && (top.amount/total) >= 0.4){
+        var c2 = catByKey[top.key];
+        tips.push({level:'info', text: '이번 기간 지출의 ' + Math.round(top.amount/total*100) + '%가 ' + c2.label + '에 몰려있어요.'});
+      }
+    }
+
+    list.innerHTML = '';
+    if(!tips.length){
+      var msg = total > 0 ? '지출이 예산 안에서 잘 관리되고 있어요 👍' : '아직 지출 데이터가 없어요.';
+      list.innerHTML = '<div class="insight-item info">'+msg+'</div>';
+      return;
+    }
+    tips.forEach(function(t){
+      var row = document.createElement('div');
+      row.className = 'insight-item ' + t.level;
+      row.textContent = t.text;
+      list.appendChild(row);
     });
   }
 
@@ -757,7 +897,45 @@
     document.getElementById('sheetOverlay').classList.remove('open');
   }
 
+  function computeCrossedBudgets(beforeTotal, beforeCat, catKey){
+    var crossed = [];
+    var afterRange = txInRange();
+    var afterTotal = afterRange.reduce(function(s,t){ return s+t.amount; }, 0);
+    var afterCat = afterRange.filter(function(t){ return t.category === catKey; }).reduce(function(s,t){ return s+t.amount; }, 0);
+
+    if(budgets.total && afterTotal > budgets.total && beforeTotal <= budgets.total){
+      crossed.push({label:'총 지출', amount:afterTotal, budget:budgets.total});
+    }
+    var catBudget = budgets.byCategory[catKey];
+    var c = catByKey[catKey];
+    if(catBudget && c && afterCat > catBudget && beforeCat <= catBudget){
+      crossed.push({label:c.label, amount:afterCat, budget:catBudget});
+    }
+    return crossed;
+  }
+
+  function renderBudgetWarningBanner(crossed){
+    var banner = document.getElementById('notifBanner');
+    var card = document.querySelector('#notifBanner .incoming-card');
+    var lines = crossed.map(function(c){
+      return c.label + ' · ' + won(c.amount) + ' / ' + won(c.budget) + ' 예산';
+    }).join('<br>');
+    card.innerHTML =
+      '<div class="incoming-icon incoming-icon-warn">⚠️</div>' +
+      '<div class="incoming-body">' +
+        '<div class="incoming-head"><span class="incoming-app">AI 가계부</span><span class="incoming-time">방금</span></div>' +
+        '<div class="incoming-line-bold" style="color:var(--danger);">예산을 초과했어요</div>' +
+        '<div class="incoming-line">' + lines + '</div>' +
+      '</div>';
+    banner.classList.add('show');
+    setTimeout(function(){ banner.classList.remove('show'); }, 3200);
+  }
+
   function finalize(item, catKey){
+    var beforeRange = txInRange();
+    var beforeTotal = beforeRange.reduce(function(s,t){ return s+t.amount; }, 0);
+    var beforeCat = beforeRange.filter(function(t){ return t.category === catKey; }).reduce(function(s,t){ return s+t.amount; }, 0);
+
     cardCumulative += item.amount;
     save('ail_cumulative', cardCumulative);
     var tx = {id:'tx-'+Math.floor(Math.random()*1e9), merchant:item.merchant, amount:item.amount, category:catKey, time:new Date().toISOString()};
@@ -769,6 +947,11 @@
     if(flashEl){
       flashEl.classList.add('flash');
       setTimeout(function(){ flashEl.classList.remove('flash'); }, 900);
+    }
+
+    var crossed = computeCrossedBudgets(beforeTotal, beforeCat, catKey);
+    if(crossed.length){
+      setTimeout(function(){ renderBudgetWarningBanner(crossed); }, 600);
     }
   }
 
@@ -951,6 +1134,41 @@
   }
   document.getElementById('tabHomeBtn').addEventListener('click', function(){ showTab('home'); });
   document.getElementById('tabTestBtn').addEventListener('click', function(){ showTab('test'); });
+
+  function openBudgetSheet(){
+    document.getElementById('budgetTotalInput').value = budgets.total || '';
+    var wrap = document.getElementById('budgetCategoryInputs');
+    wrap.innerHTML = '';
+    CATEGORIES.forEach(function(c){
+      var row = document.createElement('div');
+      row.className = 'budget-input-row';
+      row.innerHTML =
+        '<span class="budget-input-label"><span class="chip-dot" style="background:'+c.color+'"></span>'+c.label+'</span>' +
+        '<input type="number" inputmode="numeric" class="budget-input" data-cat="'+c.key+'" placeholder="선택">';
+      wrap.appendChild(row);
+      row.querySelector('input').value = budgets.byCategory[c.key] || '';
+    });
+    document.getElementById('budgetSheetOverlay').classList.add('open');
+  }
+  document.getElementById('budgetSettingsBtn').addEventListener('click', openBudgetSheet);
+  document.getElementById('budgetSheetOverlay').addEventListener('click', function(e){
+    if(e.target === document.getElementById('budgetSheetOverlay')){
+      document.getElementById('budgetSheetOverlay').classList.remove('open');
+    }
+  });
+  document.getElementById('budgetSaveBtn').addEventListener('click', function(){
+    var totalVal = parseInt(document.getElementById('budgetTotalInput').value, 10);
+    budgets.total = (totalVal > 0) ? totalVal : null;
+    budgets.byCategory = {};
+    document.querySelectorAll('#budgetCategoryInputs input').forEach(function(inp){
+      var v = parseInt(inp.value, 10);
+      if(v > 0) budgets.byCategory[inp.dataset.cat] = v;
+    });
+    save('ail_budgets', budgets);
+    document.getElementById('budgetSheetOverlay').classList.remove('open');
+    renderTotalsAndChart();
+    showToast('예산을 저장했어요');
+  });
 
   document.getElementById('resetBtn').addEventListener('click', function(){
     document.getElementById('resetConfirmOverlay').classList.add('open');
