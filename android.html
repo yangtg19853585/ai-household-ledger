@@ -526,8 +526,18 @@
 
   var merchantMap = load('ail_merchant_map', {});
   var transactions = load('ail_transactions', []);
-  var queueIdx = load('ail_queue_idx', 0);
   var cardCumulative = load('ail_cumulative', 0);
+  var lastAlertIdx = -1;
+
+  function pickRandomAlert(){
+    if(ALERT_QUEUE.length === 1) return ALERT_QUEUE[0];
+    var idx;
+    do {
+      idx = Math.floor(Math.random() * ALERT_QUEUE.length);
+    } while(idx === lastAlertIdx);
+    lastAlertIdx = idx;
+    return ALERT_QUEUE[idx];
+  }
 
   function toDateInputValue(d){
     var y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
@@ -907,9 +917,7 @@
     var btn = document.getElementById('smsBtn');
     btn.disabled = true;
 
-    var item = ALERT_QUEUE[queueIdx % ALERT_QUEUE.length];
-    queueIdx++;
-    save('ail_queue_idx', queueIdx);
+    var item = pickRandomAlert();
 
     showCardAlertBanner(item);
   }
@@ -1062,12 +1070,12 @@
     }
   });
   document.getElementById('resetConfirmBtn').addEventListener('click', function(){
-    ['ail_transactions','ail_queue_idx','ail_cumulative','ail_range'].forEach(function(k){
+    ['ail_transactions','ail_cumulative','ail_range'].forEach(function(k){
       localStorage.removeItem(k);
     });
 
     transactions = [];
-    queueIdx = 0;
+    lastAlertIdx = -1;
     cardCumulative = 0;
     range = defaultRange();
 
