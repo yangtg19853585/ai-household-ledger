@@ -76,7 +76,23 @@
   }
   .app-bar-sub{font-size:12.5px;color:var(--text-faint);}
 
-  .app-body{padding:0 18px 28px;display:flex;flex-direction:column;gap:16px;flex:1;}
+  .app-body{padding:0 18px 16px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+
+  .screen-pane{display:flex;flex-direction:column;gap:16px;}
+  .screen-pane.hidden{display:none;}
+
+  .tab-bar{
+    display:flex;flex:none;border-top:1px solid var(--border);
+    background:var(--ink);padding-bottom:env(safe-area-inset-bottom, 0);
+  }
+  .tab-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:9px 0 8px;background:none;border:none;color:var(--text-faint);
+    font-size:10.5px;font-weight:600;cursor:pointer;
+  }
+  .tab-item .tab-icon{font-size:18px;line-height:1;}
+  .tab-item.active{color:var(--accent);}
+  .tab-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
 
   .card{
     background:var(--surface);
@@ -342,48 +358,61 @@
       </div>
 
       <div class="app-body">
-        <div class="card">
-          <div class="hero-label" id="heroLabel">총 지출</div>
-          <div class="hero-amount" id="heroAmount">0원</div>
-          <div class="range-control">
-            <input type="date" class="range-input" id="rangeStart" aria-label="시작일">
-            <span class="range-sep">~</span>
-            <input type="date" class="range-input" id="rangeEnd" aria-label="종료일">
-            <button type="button" class="range-reset" id="rangeResetBtn">최근 30일</button>
-          </div>
-          <div class="summary-track" id="summaryTrack"></div>
-        </div>
-
-        <div class="card">
-          <div class="section-title">카테고리별 소비<span class="hint" id="chartHint">최근 30일</span></div>
-          <div class="chart-rows" id="chartRows"></div>
-        </div>
-
-        <div class="card">
-          <div class="section-title">문자메시지<span class="hint">테스트용 시뮬레이션</span></div>
-          <button class="simulate-btn" id="smsBtn" type="button">새 카드 승인 문자 받기</button>
-
-          <div class="sms-wrap" id="smsWrap">
-            <div class="sms-thread">
-              <div class="sms-sender">현대카드 (1588-6700)</div>
-              <div class="sms-bubble" id="smsBubble"></div>
-              <button class="share-btn" id="shareBtn" type="button">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                공유하기
-              </button>
+        <div class="screen-pane" id="homeScreen">
+          <div class="card">
+            <div class="hero-label" id="heroLabel">총 지출</div>
+            <div class="hero-amount" id="heroAmount">0원</div>
+            <div class="range-control">
+              <input type="date" class="range-input" id="rangeStart" aria-label="시작일">
+              <span class="range-sep">~</span>
+              <input type="date" class="range-input" id="rangeEnd" aria-label="종료일">
+              <button type="button" class="range-reset" id="rangeResetBtn">최근 30일</button>
             </div>
+            <div class="summary-track" id="summaryTrack"></div>
           </div>
 
-          <p style="margin:10px 2px 0;font-size:12px;color:var(--text-faint);line-height:1.5;">받은 문자를 공유하면, AI 가계부가 내용을 읽어 가맹점을 분석하고 자동으로(또는 처음이면 직접 선택해) 분류해요.</p>
+          <div class="card">
+            <div class="section-title">카테고리별 소비<span class="hint" id="chartHint">최근 30일</span></div>
+            <div class="chart-rows" id="chartRows"></div>
+          </div>
+
+          <div class="card">
+            <div class="section-title">가계부 내역<span class="hint" id="ledgerCount"></span></div>
+            <div class="ledger-list" id="ledgerList" style="margin-top:10px;"></div>
+          </div>
         </div>
 
-        <div class="card">
-          <div class="section-title">가계부 내역<span class="hint" id="ledgerCount"></span></div>
-          <div class="ledger-list" id="ledgerList" style="margin-top:10px;"></div>
-        </div>
+        <div class="screen-pane hidden" id="testScreen">
+          <div class="card">
+            <div class="section-title">문자메시지<span class="hint">테스트용 시뮬레이션</span></div>
+            <button class="simulate-btn" id="smsBtn" type="button">새 카드 승인 문자 받기</button>
 
-        <div class="footnote">* MVP 범위 데모입니다 (현대카드 문자 포맷만 지원). iOS는 알림을 직접 읽을 수 없어, 실제 서비스에서는 문자를 iOS 공유 시트로 앱에 전달하는 Share Extension 방식으로 동일하게 동작해요.</div>
-        <button type="button" class="reset-link" id="resetBtn">데모 데이터 초기화</button>
+            <div class="sms-wrap" id="smsWrap">
+              <div class="sms-thread">
+                <div class="sms-sender">현대카드 (1588-6700)</div>
+                <div class="sms-bubble" id="smsBubble"></div>
+                <button class="share-btn" id="shareBtn" type="button">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                  공유하기
+                </button>
+              </div>
+            </div>
+
+            <p style="margin:10px 2px 0;font-size:12px;color:var(--text-faint);line-height:1.5;">받은 문자를 공유하면, AI 가계부가 내용을 읽어 가맹점을 분석하고 자동으로(또는 처음이면 직접 선택해) 분류해요. 홈 화면에서 결과를 확인해보세요.</p>
+          </div>
+
+          <div class="footnote">* MVP 범위 데모입니다 (현대카드 문자 포맷만 지원). iOS는 알림을 직접 읽을 수 없어, 실제 서비스에서는 문자를 iOS 공유 시트로 앱에 전달하는 Share Extension 방식으로 동일하게 동작해요. 이 화면은 테스트를 위한 것으로, 실제 서비스에는 없어요.</div>
+          <button type="button" class="reset-link" id="resetBtn">데모 데이터 초기화</button>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <button type="button" class="tab-item active" id="tabHomeBtn">
+          <span class="tab-icon">🏠</span>홈
+        </button>
+        <button type="button" class="tab-item" id="tabTestBtn">
+          <span class="tab-icon">🧪</span>테스트
+        </button>
       </div>
     </div>
   </div>
@@ -448,23 +477,6 @@
   var catByKey = {};
   CATEGORIES.forEach(function(c){ catByKey[c.key] = c; });
 
-  var SEED = [
-    {merchant:'스타벅스 강남점', amount:6500, cat:'cafe', days:0},
-    {merchant:'쿠팡', amount:32400, cat:'shopping', days:1},
-    {merchant:'샤브샤브 화로구이', amount:55800, cat:'food', days:1},
-    {merchant:'GS25 광교점', amount:4200, cat:'living', days:2},
-    {merchant:'지하철 정기권', amount:55000, cat:'transport', days:3},
-    {merchant:'CGV 광교', amount:15000, cat:'culture', days:4},
-    {merchant:'이디야커피', amount:4800, cat:'cafe', days:6},
-    {merchant:'쿠팡', amount:18900, cat:'shopping', days:8},
-    {merchant:'배달의민족', amount:23000, cat:'food', days:10},
-    {merchant:'올리브영', amount:27600, cat:'shopping', days:13},
-    {merchant:'무인세탁소 광교점', amount:1800, cat:'living', days:16},
-    {merchant:'교보문고', amount:19800, cat:'culture', days:20},
-    {merchant:'택시', amount:12300, cat:'transport', days:24},
-    {merchant:'GS25 광교점', amount:3100, cat:'living', days:27},
-  ];
-
   var ALERT_QUEUE = [
     {merchant:'스타벅스 강남점', amount:5000},
     {merchant:'무신사', amount:47000},
@@ -480,27 +492,10 @@
   }
   function save(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
 
-  function daysAgoIso(n){
-    var d = new Date();
-    d.setDate(d.getDate() - n);
-    d.setHours(9 + (n % 6), 15 + (n * 7 % 40), 0, 0);
-    return d.toISOString();
-  }
-
-  function buildDefaults(){
-    var map = {};
-    var txs = SEED.map(function(s, i){
-      if(!(s.merchant in map)) map[s.merchant] = s.cat;
-      return {id:'seed-'+i, merchant:s.merchant, amount:s.amount, category:s.cat, time: daysAgoIso(s.days)};
-    });
-    return {map:map, txs:txs};
-  }
-
-  var defaults = buildDefaults();
-  var merchantMap = load('ail_merchant_map', defaults.map);
-  var transactions = load('ail_transactions', defaults.txs);
+  var merchantMap = load('ail_merchant_map', {});
+  var transactions = load('ail_transactions', []);
   var queueIdx = load('ail_queue_idx', 0);
-  var cardCumulative = load('ail_cumulative', transactions.reduce(function(s,t){return s+t.amount;}, 0));
+  var cardCumulative = load('ail_cumulative', 0);
 
   function toDateInputValue(d){
     var y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
@@ -608,8 +603,11 @@
   function renderLedger(){
     var list = document.getElementById('ledgerList');
     var sorted = transactions.slice().sort(function(a,b){ return new Date(b.time)-new Date(a.time); }).slice(0, 10);
-    document.getElementById('ledgerCount').textContent = '최근 '+sorted.length+'건';
+    document.getElementById('ledgerCount').textContent = sorted.length ? '최근 '+sorted.length+'건' : '';
     list.innerHTML = '';
+    if(!sorted.length){
+      list.innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);padding:4px 2px;">아직 내역이 없어요. "테스트" 탭에서 카드 승인 문자를 받아보세요.</div>';
+    }
     sorted.forEach(function(t){
       var c = catByKey[t.category] || catByKey.etc;
       var row = document.createElement('div');
@@ -837,6 +835,15 @@
     save('ail_range', range);
     renderTotalsAndChart();
   });
+
+  function showTab(name){
+    document.getElementById('homeScreen').classList.toggle('hidden', name !== 'home');
+    document.getElementById('testScreen').classList.toggle('hidden', name !== 'test');
+    document.getElementById('tabHomeBtn').classList.toggle('active', name === 'home');
+    document.getElementById('tabTestBtn').classList.toggle('active', name === 'test');
+  }
+  document.getElementById('tabHomeBtn').addEventListener('click', function(){ showTab('home'); });
+  document.getElementById('tabTestBtn').addEventListener('click', function(){ showTab('test'); });
 
   document.getElementById('resetBtn').addEventListener('click', function(){
     if(!window.confirm('모든 데모 데이터를 초기화할까요? 저장된 내역과 분류 기록이 모두 사라져요.')) return;
