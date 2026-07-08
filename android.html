@@ -448,7 +448,7 @@
               <input type="date" class="range-input" id="rangeStart" aria-label="시작일">
               <span class="range-sep">~</span>
               <input type="date" class="range-input" id="rangeEnd" aria-label="종료일">
-              <button type="button" class="range-reset" id="rangeResetBtn">최근 30일</button>
+              <button type="button" class="range-reset" id="rangeResetBtn">이번 달</button>
             </div>
           </div>
 
@@ -459,7 +459,7 @@
           </div>
 
           <div class="card">
-            <div class="section-title">카테고리별 소비<span class="hint" id="chartHint">최근 30일</span></div>
+            <div class="section-title">카테고리별 소비<span class="hint" id="chartHint">이번 달</span></div>
             <div class="chart-rows" id="chartRows"></div>
           </div>
 
@@ -682,13 +682,6 @@
     var p = v.split('-').map(Number);
     return new Date(p[0], p[1]-1, p[2]);
   }
-  function defaultRange(){
-    var end = new Date();
-    var start = new Date();
-    start.setDate(start.getDate() - 29);
-    return {start: toDateInputValue(start), end: toDateInputValue(end)};
-  }
-  var range = load('ail_range', null) || defaultRange();
   var monthStartDay = load('ail_month_start_day', 1);
 
   function cycleKeyForDate(d, startDay){
@@ -706,12 +699,24 @@
     var end = new Date(nextStart.getTime() - 1);
     return {start: start, end: end};
   }
+  function defaultRange(){
+    var ym = cycleKeyForDate(new Date(), monthStartDay);
+    var bounds = cycleBounds(ym, monthStartDay);
+    return {start: toDateInputValue(bounds.start), end: toDateInputValue(bounds.end)};
+  }
+  var range = load('ail_range', null) || defaultRange();
   function cycleLabel(ym){
     if(monthStartDay === 1){
       return parseInt(ym.slice(5,7), 10) + '월';
     }
     var b = cycleBounds(ym, monthStartDay);
     return (b.start.getMonth()+1) + '월 ' + b.start.getDate() + '일 ~ ' + (b.end.getMonth()+1) + '월 ' + b.end.getDate() + '일';
+  }
+
+  function updateRangeResetLabel(){
+    var btn = document.getElementById('rangeResetBtn');
+    if(!btn) return;
+    btn.textContent = cycleLabel(cycleKeyForDate(new Date(), monthStartDay));
   }
 
   function computeRecordMonths(){
@@ -1463,6 +1468,7 @@
     save('ail_month_start_day', monthStartDay);
     RECORD_MONTHS = computeRecordMonths();
     document.getElementById('monthStartSheetOverlay').classList.remove('open');
+    updateRangeResetLabel();
     renderRecordsList();
     renderTotalsAndChart();
     showToast('월 시작일을 ' + monthStartDay + '일로 설정했어요');
@@ -1520,6 +1526,7 @@
 
   document.getElementById('rangeStart').value = range.start;
   document.getElementById('rangeEnd').value = range.end;
+  updateRangeResetLabel();
 
   save('ail_merchant_map', merchantMap);
   save('ail_transactions', transactions);
