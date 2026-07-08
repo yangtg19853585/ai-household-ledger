@@ -420,7 +420,7 @@
           </div>
 
           <div class="card">
-            <div class="section-title">예산<button type="button" class="hint-btn" id="budgetSettingsBtn">설정</button></div>
+            <div class="section-title"><span id="budgetCardTitle">예산</span><button type="button" class="hint-btn" id="budgetSettingsBtn">설정</button></div>
             <div id="budgetSummary"></div>
           </div>
 
@@ -513,7 +513,7 @@
 <div class="sheet-overlay" id="budgetSheetOverlay">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">예산 설정</div>
+    <div class="sheet-title" id="budgetSheetTitle">예산 설정</div>
     <div class="sheet-sub">목표 예산을 넘으면 알림으로 알려드려요. 비워두면 그 항목은 확인하지 않아요.</div>
     <div class="budget-input-row">
       <span class="budget-input-label">이번 기간 총 예산</span>
@@ -650,7 +650,11 @@
     return {start: toDateInputValue(start), end: toDateInputValue(end)};
   }
   var range = load('ail_range', null) || defaultRange();
-  var budgets = load('ail_budgets', {total: null, byCategory: {}});
+  var budgetsByMonth = load('ail_budgets_by_month', {});
+
+  function currentBudgetMonth(){ return range.end.slice(0, 7); }
+  function getCurrentBudget(){ return budgetsByMonth[currentBudgetMonth()] || {total: null, byCategory: {}}; }
+  function budgetMonthLabel(){ return parseInt(currentBudgetMonth().slice(5,7), 10) + '월'; }
 
   function won(n){ return n.toLocaleString('ko-KR') + '원'; }
 
@@ -759,9 +763,11 @@
 
   function renderBudgetCard(total, sums){
     var el = document.getElementById('budgetSummary');
+    document.getElementById('budgetCardTitle').textContent = budgetMonthLabel() + ' 예산';
+    var budgets = getCurrentBudget();
     var catKeys = Object.keys(budgets.byCategory).filter(function(k){ return budgets.byCategory[k] > 0; });
     if(!budgets.total && !catKeys.length){
-      el.innerHTML = '<p class="budget-empty">예산을 설정하면 초과할 때 알려드려요.</p>';
+      el.innerHTML = '<p class="budget-empty">'+budgetMonthLabel()+' 예산을 설정하면 초과할 때 알려드려요.</p>';
       return;
     }
     var html = '';
@@ -778,6 +784,7 @@
 
   function renderInsights(total, sums){
     var list = document.getElementById('insightsList');
+    var budgets = getCurrentBudget();
     var tips = [];
 
     Object.keys(budgets.byCategory).forEach(function(key){
@@ -974,11 +981,15 @@
     document.getElementById('sheetOverlay').classList.remove('open');
   }
 
-  function computeCrossedBudgets(beforeTotal, beforeCat, catKey){
+  function computeCrossedBudgets(ym, monthStart, monthEnd, beforeTotal, beforeCat, catKey){
+    var budgets = budgetsByMonth[ym] || {total: null, byCategory: {}};
     var crossed = [];
-    var afterRange = txInRange();
-    var afterTotal = afterRange.reduce(function(s,t){ return s+t.amount; }, 0);
-    var afterCat = afterRange.filter(function(t){ return t.category === catKey; }).reduce(function(s,t){ return s+t.amount; }, 0);
+    var afterTx = transactions.filter(function(t){
+      var tm = new Date(t.time).getTime();
+      return tm >= monthStart && tm <= monthEnd;
+    });
+    var afterTotal = afterTx.reduce(function(s,t){ return s+t.amount; }, 0);
+    var afterCat = afterTx.filter(function(t){ return t.category === catKey; }).reduce(function(s,t){ return s+t.amount; }, 0);
 
     if(budgets.total && afterTotal > budgets.total && beforeTotal <= budgets.total){
       crossed.push({label:'총 지출', amount:afterTotal, budget:budgets.total});
@@ -1009,9 +1020,16 @@
   }
 
   function finalize(item, catKey){
-    var beforeRange = txInRange();
-    var beforeTotal = beforeRange.reduce(function(s,t){ return s+t.amount; }, 0);
-    var beforeCat = beforeRange.filter(function(t){ return t.category === catKey; }).reduce(function(s,t){ return s+t.amount; }, 0);
+    var now = new Date();
+    var ym = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+    var monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    var monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59, 999).getTime();
+    var beforeTx = transactions.filter(function(t){
+      var tm = new Date(t.time).getTime();
+      return tm >= monthStart && tm <= monthEnd;
+    });
+    var beforeTotal = beforeTx.reduce(function(s,t){ return s+t.amount; }, 0);
+    var beforeCat = beforeTx.filter(function(t){ return t.category === catKey; }).reduce(function(s,t){ return s+t.amount; }, 0);
 
     cardCumulative += item.amount;
     save('ail_cumulative', cardCumulative);
@@ -1027,7 +1045,7 @@
       setTimeout(function(){ flashEl.classList.remove('flash'); }, 900);
     }
 
-    var crossed = computeCrossedBudgets(beforeTotal, beforeCat, catKey);
+    var crossed = computeCrossedBudgets(ym, monthStart, monthEnd, beforeTotal, beforeCat, catKey);
     if(crossed.length){
       setTimeout(function(){ renderBudgetWarningBanner(crossed); }, 600);
     }
@@ -1186,6 +1204,8 @@
   document.getElementById('tabTestBtn').addEventListener('click', function(){ showTab('test'); });
 
   function openBudgetSheet(){
+    var budgets = getCurrentBudget();
+    document.getElementById('budgetSheetTitle').textContent = budgetMonthLabel() + ' 예산 설정';
     document.getElementById('budgetTotalInput').value = budgets.total || '';
     var wrap = document.getElementById('budgetCategoryInputs');
     wrap.innerHTML = '';
@@ -1207,17 +1227,18 @@
     }
   });
   document.getElementById('budgetSaveBtn').addEventListener('click', function(){
+    var newBudget = {total: null, byCategory: {}};
     var totalVal = parseInt(document.getElementById('budgetTotalInput').value, 10);
-    budgets.total = (totalVal > 0) ? totalVal : null;
-    budgets.byCategory = {};
+    newBudget.total = (totalVal > 0) ? totalVal : null;
     document.querySelectorAll('#budgetCategoryInputs input').forEach(function(inp){
       var v = parseInt(inp.value, 10);
-      if(v > 0) budgets.byCategory[inp.dataset.cat] = v;
+      if(v > 0) newBudget.byCategory[inp.dataset.cat] = v;
     });
-    save('ail_budgets', budgets);
+    budgetsByMonth[currentBudgetMonth()] = newBudget;
+    save('ail_budgets_by_month', budgetsByMonth);
     document.getElementById('budgetSheetOverlay').classList.remove('open');
     renderTotalsAndChart();
-    showToast('예산을 저장했어요');
+    showToast(budgetMonthLabel() + ' 예산을 저장했어요');
   });
 
   document.getElementById('resetBtn').addEventListener('click', function(){
