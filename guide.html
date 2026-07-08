@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#12141c">
+<title>AI 가계부 · 이용 가이드</title>
+<style>
+  :root{
+    --ink:#12141c;
+    --surface:#1a1e2a;
+    --surface-2:#212637;
+    --border:#2b3145;
+    --text:#f2efe8;
+    --text-dim:#9a9fb4;
+    --text-faint:#666c84;
+    --accent:#e8a33d;
+    --accent-soft:rgba(232,163,61,.14);
+    --good:#4fb0a5;
+    --danger:#ff6b5d;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html{background:var(--ink);}
+  body{
+    background:
+      radial-gradient(560px 380px at 15% -8%, rgba(232,163,61,.08), transparent 60%),
+      radial-gradient(480px 360px at 100% 10%, rgba(79,176,165,.06), transparent 55%),
+      var(--ink);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+
+  .page{max-width:640px;margin:0 auto;padding:0 20px 64px;}
+
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:18px 0 14px;border-bottom:1px solid var(--border);margin-bottom:32px;
+  }
+  .topbar-brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;}
+  .topbar-links{display:flex;gap:14px;font-size:12.5px;}
+  .topbar-links a{color:var(--text-dim);text-decoration:none;font-weight:600;}
+  .topbar-links a:hover{color:var(--accent);}
+
+  .eyebrow{
+    font-size:11.5px;font-weight:700;color:var(--accent);letter-spacing:.04em;
+    display:block;margin-bottom:10px;
+  }
+  h1{
+    font-size:28px;font-weight:800;letter-spacing:-.02em;margin:0 0 10px;
+    text-wrap:balance;line-height:1.25;
+  }
+  .lede{font-size:14.5px;color:var(--text-dim);line-height:1.7;margin:0 0 28px;max-width:52ch;}
+
+  .cta-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:40px;}
+  .cta{
+    flex:1;min-width:140px;text-align:center;text-decoration:none;
+    padding:13px 16px;border-radius:14px;font-size:13.5px;font-weight:700;
+  }
+  .cta.primary{background:var(--accent);color:#241a06;}
+  .cta.secondary{background:var(--surface);border:1px solid var(--border);color:var(--text);}
+
+  .callout{
+    display:flex;gap:12px;padding:16px 18px;border-radius:16px;
+    background:var(--accent-soft);border:1px solid rgba(232,163,61,.3);
+    margin-bottom:40px;
+  }
+  .callout-icon{font-size:20px;line-height:1;flex:none;}
+  .callout h3{margin:0 0 6px;font-size:14.5px;font-weight:800;color:var(--accent);}
+  .callout p{margin:0;font-size:13.5px;line-height:1.7;color:var(--text-dim);}
+
+  section{margin-bottom:44px;}
+  section:last-of-type{margin-bottom:8px;}
+  h2{
+    font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--text-faint);margin:0 0 18px;
+  }
+
+  .steps{list-style:none;margin:0;padding:0;counter-reset:step;}
+  .steps li{
+    counter-increment:step;position:relative;padding:0 0 20px 40px;
+    border-left:1px solid var(--border);margin-left:14px;
+  }
+  .steps li:last-child{border-left-color:transparent;padding-bottom:0;}
+  .steps li::before{
+    content:counter(step);position:absolute;left:-14px;top:0;
+    width:28px;height:28px;border-radius:50%;background:var(--surface-2);
+    border:1px solid var(--border);color:var(--accent);font-weight:800;font-size:12.5px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .steps h4{margin:2px 0 5px;font-size:14.5px;font-weight:700;}
+  .steps p{margin:0;font-size:13.5px;line-height:1.7;color:var(--text-dim);}
+
+  .cardgrid{display:flex;flex-direction:column;gap:10px;}
+  .infocard{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;}
+  .infocard h4{margin:0 0 6px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;}
+  .infocard p{margin:0;font-size:13px;line-height:1.7;color:var(--text-dim);}
+  .infocard .tag{
+    font-size:10px;font-weight:700;color:var(--ink);background:var(--accent);
+    padding:2px 7px;border-radius:20px;letter-spacing:.02em;
+  }
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:14px;}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);line-height:1.6;}
+  th{color:var(--text-faint);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:var(--surface);}
+  tr:last-child td{border-bottom:none;}
+  td{color:var(--text-dim);}
+  td strong{color:var(--text);}
+
+  .faqlist{display:flex;flex-direction:column;gap:14px;}
+  .faqlist details{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:4px 18px;}
+  .faqlist summary{
+    padding:14px 0;font-size:13.5px;font-weight:700;cursor:pointer;
+    list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;
+  }
+  .faqlist summary::-webkit-details-marker{display:none;}
+  .faqlist summary::after{content:'+';color:var(--text-faint);font-size:18px;font-weight:400;flex:none;}
+  .faqlist details[open] summary::after{content:'–';}
+  .faqlist p{margin:0 0 16px;font-size:13px;line-height:1.7;color:var(--text-dim);}
+
+  .limits{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;}
+  .limits li{
+    display:flex;gap:10px;font-size:13px;line-height:1.65;color:var(--text-dim);
+    padding:12px 14px;background:var(--surface-2);border-radius:12px;
+  }
+  .limits li::before{content:'—';color:var(--text-faint);flex:none;}
+
+  footer{
+    margin-top:52px;padding-top:20px;border-top:1px solid var(--border);
+    font-size:11.5px;color:var(--text-faint);text-align:center;line-height:1.7;
+  }
+  footer a{color:var(--text-dim);text-decoration:underline;text-underline-offset:2px;}
+
+  @media (max-width:480px){
+    .page{padding:0 16px 48px;}
+    h1{font-size:24px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="topbar">
+    <div class="topbar-brand">📒 AI 가계부</div>
+    <div class="topbar-links">
+      <a href="index.html">iOS 데모</a>
+      <a href="android.html">Android 데모</a>
+    </div>
+  </div>
+
+  <span class="eyebrow">이용 가이드</span>
+  <h1>카드 알림 한 장이<br>가계부 한 줄이 되기까지</h1>
+  <p class="lede">카드 결제 알림을 자동으로 읽어 카테고리별로 정리해주는 가계부 앱의 프로토타입 데모입니다. 실제 카드나 알림 연동 없이, 그 흐름을 화면으로 체험해볼 수 있어요.</p>
+
+  <div class="cta-row">
+    <a class="cta primary" href="index.html">🍎 iOS 데모 열기</a>
+    <a class="cta secondary" href="android.html">🤖 Android 데모 열기</a>
+  </div>
+
+  <div class="callout">
+    <span class="callout-icon">🔒</span>
+    <div>
+      <h3>먼저 알아두세요</h3>
+      <p>이 데모는 서버가 없어요. 지금 이 화면을 보고 있는 브라우저 안에만 데이터가 저장되고, 다른 사람이 같은 링크를 열어도 서로의 기록은 절대 보이지 않아요. 폰에서 열어본 것과 PC에서 열어본 것도 서로 다른 별개의 데이터예요.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2>이렇게 시작해보세요</h2>
+    <ol class="steps">
+      <li>
+        <h4>"테스트" 탭으로 이동</h4>
+        <p>하단 탭 중 🧪 테스트를 눌러요. 실제 서비스라면 자동으로 일어날 일을, 여기서는 버튼으로 직접 눌러 체험해볼 수 있어요.</p>
+      </li>
+      <li>
+        <h4>카드 알림 받아보기</h4>
+        <p>"새 카드 승인 문자(또는 알림) 받기"를 누르면, 화면 위에서 알림 배너가 내려와요. AI가 가맹점을 분석하는 과정이 이어집니다.</p>
+      </li>
+      <li>
+        <h4>처음 보는 가맹점이면 카테고리 선택</h4>
+        <p>이미 아는 가맹점이면 자동으로 분류되고, 처음이면 어떤 카테고리인지 직접 골라요. 편의점처럼 매번 다른 곳은 "다음부터 자동 분류" 체크를 해제해두면 매번 다시 물어봐요.</p>
+      </li>
+      <li>
+        <h4>"홈"에서 결과 확인</h4>
+        <p>총 지출, 예산 진행률, 카테고리별 막대그래프, 절약 인사이트, 방금 추가된 내역까지 한 번에 반영돼요.</p>
+      </li>
+      <li>
+        <h4>예산을 정해보기</h4>
+        <p>홈 화면 "예산" 카드의 "설정"을 눌러 총 예산과 카테고리별 예산을 입력해보세요. 예산을 넘기는 순간 경고 알림이 자동으로 떠요.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>화면 구성</h2>
+    <div class="cardgrid">
+      <div class="infocard">
+        <h4>🏠 홈</h4>
+        <p>기간을 직접 골라 총 지출, 예산 대비 사용률, 카테고리별 막대그래프, 한 줄 절약 인사이트, 가계부 내역을 확인해요. 실제로 쌓은 데이터가 없으면 0원부터 시작합니다.</p>
+      </div>
+      <div class="infocard">
+        <h4>📅 기록</h4>
+        <p>1월부터 이번 달까지 월별 지출 요약을 볼 수 있어요. 월을 탭하면 홈 화면이 그 기간으로 바로 이동해요. "시작일" 설정으로 매달 며칠부터 한 달로 셀지도 정할 수 있어요 (예: 25일 ~ 다음달 24일).</p>
+      </div>
+      <div class="infocard">
+        <h4>🧪 테스트<span class="tag">데모 전용</span></h4>
+        <p>실제 서비스에는 없는, 카드 알림이 오는 상황을 흉내 내는 화면이에요. 가맹점 자동분류 설정 관리와 데모 데이터 초기화도 여기 있어요.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>iOS 데모 vs Android 데모</h2>
+    <div class="tablewrap">
+      <table>
+        <tr><th></th><th>iOS</th><th>Android</th></tr>
+        <tr>
+          <td><strong>알림을 받는 방식</strong></td>
+          <td>문자를 앱에 <strong>공유하기</strong>로 전달 (수동 1단계)</td>
+          <td>알림 접근 권한으로 <strong>자동</strong> 감지</td>
+        </tr>
+        <tr>
+          <td><strong>이유</strong></td>
+          <td>iOS는 다른 앱의 알림·문자 내용을 읽는 공개 API가 없음</td>
+          <td>Android는 알림 텍스트를 앱이 직접 받을 수 있음</td>
+        </tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>자주 묻는 것들</h2>
+    <div class="faqlist">
+      <details>
+        <summary>초기화 버튼을 누르면 뭐가 지워지나요?</summary>
+        <p>"테스트" 탭에서 추가한 최근 내역과 기간 설정만 지워져요. 가맹점 자동분류 설정, 예산 설정, "기록" 탭의 월별 더미 데이터, 월 시작일 설정은 그대로 남아요.</p>
+      </details>
+      <details>
+        <summary>같은 링크를 다른 사람에게 보내면 제 데이터가 보이나요?</summary>
+        <p>아니요. 서버가 없는 구조라 모든 데이터는 각자의 브라우저에만 남아요. 다만 1~6월 더미 데이터는 항상 "총 200만 원 안팎 + 비슷한 카테고리 비율"로 생성되기 때문에, 다른 사람 화면도 얼핏 비슷해 보일 수 있어요 — 실제로는 서로 완전히 독립된 데이터예요.</p>
+      </details>
+      <details>
+        <summary>실제 제 카드 알림을 읽어주나요?</summary>
+        <p>아니요. 이건 UX 흐름을 검증하기 위한 프로토타입이에요. 실제 카드 문자·알림 연동은 되어 있지 않고, 모든 알림은 "테스트" 탭에서 시뮬레이션한 것입니다.</p>
+      </details>
+    </div>
+  </section>
+
+  <section>
+    <h2>알아두면 좋은 한계</h2>
+    <ul class="limits">
+      <li>현대카드 알림 포맷만 가정한 프로토타입이라, 다른 카드사·실제 문자 연동은 되어 있지 않아요.</li>
+      <li>모든 데이터는 브라우저에만 저장되고, 새로고침해도 유지되지만 "사이트 데이터 삭제"를 하면 사라져요.</li>
+      <li>실제 네이티브 앱(iOS Share Extension / Android 알림 접근 권한) 구현은 다음 단계예요.</li>
+    </ul>
+  </section>
+
+  <footer>
+    데모 링크 &middot; <a href="index.html">iOS</a> &middot; <a href="android.html">Android</a>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -79,6 +79,7 @@
   .app-bar-sub{font-size:12.5px;color:var(--text-faint);}
   .platform-switch{font-size:11px;color:var(--text-faint);text-decoration:none;font-weight:600;white-space:nowrap;}
   .platform-switch:active{color:var(--accent);}
+  .platform-switch-group{display:flex;align-items:center;gap:12px;}
 
   .app-body{padding:0 18px 16px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 
@@ -446,7 +447,10 @@
             <span class="app-bar-title">AI 가계부</span>
             <span class="app-bar-tag">MVP · iOS</span>
           </div>
-          <a href="android.html" class="platform-switch">🤖 Android →</a>
+          <span class="platform-switch-group">
+            <a href="guide.html" class="platform-switch">📘 가이드</a>
+            <a href="android.html" class="platform-switch">🤖 Android →</a>
+          </span>
         </div>
         <span class="app-bar-sub">카드 승인 문자를 공유하면 자동으로 분류해드려요</span>
       </div>

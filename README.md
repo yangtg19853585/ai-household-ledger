@@ -6,8 +6,9 @@
 
 - **iOS**: https://yangtg19853585.github.io/ai-household-ledger/
 - **Android**: https://yangtg19853585.github.io/ai-household-ledger/android.html
+- **이용 가이드**: https://yangtg19853585.github.io/ai-household-ledger/guide.html — 처음 써보는 사람을 위한 사용법 안내
 
-각 페이지 상단의 "Android →" / "iOS →" 링크로 서로 이동할 수 있어요. 폰 브라우저(사파리/크롬)로 열어서 "홈 화면에 추가"를 하면 앱처럼 아이콘을 눌러 실행할 수 있습니다.
+각 페이지 상단의 "Android →" / "iOS →" / "📘 가이드" 링크로 서로 이동할 수 있어요. 폰 브라우저(사파리/크롬)로 열어서 "홈 화면에 추가"를 하면 앱처럼 아이콘을 눌러 실행할 수 있습니다.
 
 ## 두 버전의 차이 — 왜 다르게 만들었나요
 
@@ -39,4 +40,4 @@
 
 ## 로컬에서 열어보기
 
-`index.html`(iOS) 또는 `android.html`(Android)을 브라우저(가급적 모바일 화면 폭)로 열면 바로 확인할 수 있습니다.
+`index.html`(iOS), `android.html`(Android), `guide.html`(이용 가이드)을 브라우저(가급적 모바일 화면 폭)로 열면 바로 확인할 수 있습니다.
