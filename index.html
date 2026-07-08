@@ -318,6 +318,20 @@
   }
   .merchant-map-forget:active{background-color:var(--surface-2);}
 
+  /* Records */
+  .record-item{
+    display:flex;align-items:center;gap:10px;width:100%;padding:13px 4px;
+    border-bottom:1px solid var(--border);background:none;border-left:none;border-right:none;border-top:none;
+    color:var(--text);cursor:pointer;text-align:left;font-family:inherit;
+  }
+  .record-item:last-child{border-bottom:none;}
+  .record-item:active{background-color:var(--surface-2);}
+  .record-main{flex:1;min-width:0;}
+  .record-month{font-size:14px;font-weight:700;}
+  .record-count{font-size:11px;color:var(--text-faint);margin-top:2px;}
+  .record-amount{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;flex:none;}
+  .record-chevron{color:var(--text-faint);font-size:17px;flex:none;}
+
   .footnote{font-size:11px;color:var(--text-faint);text-align:center;line-height:1.6;padding:2px 6px;}
   .reset-link{
     display:block;margin:2px auto 0;background:none;border:none;
@@ -466,6 +480,14 @@
           </div>
         </div>
 
+        <div class="screen-pane hidden" id="recordsScreen">
+          <div class="card">
+            <div class="section-title">월별 기록<span class="hint">2026년 1월 ~ 6월</span></div>
+            <div id="recordsList" style="margin-top:6px;"></div>
+          </div>
+          <p style="margin:2px 6px 0;font-size:12px;color:var(--text-faint);line-height:1.5;">월을 탭하면 홈 화면이 그 달 기간으로 바뀌어요.</p>
+        </div>
+
         <div class="screen-pane hidden" id="testScreen">
           <div class="card">
             <div class="section-title">문자메시지<span class="hint">테스트용 시뮬레이션</span></div>
@@ -498,6 +520,9 @@
       <div class="tab-bar">
         <button type="button" class="tab-item active" id="tabHomeBtn">
           <span class="tab-icon">🏠</span>홈
+        </button>
+        <button type="button" class="tab-item" id="tabRecordsBtn">
+          <span class="tab-icon">📅</span>기록
         </button>
         <button type="button" class="tab-item" id="tabTestBtn">
           <span class="tab-icon">🧪</span>테스트
@@ -558,7 +583,7 @@
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">홈 화면 데이터를 초기화할까요?</div>
-    <div class="sheet-sub">저장된 내역과 기간 설정이 사라지고 처음 상태(0원)로 돌아가요. "가맹점 자동분류 설정"과 "예산 설정"은 그대로 유지돼요.</div>
+    <div class="sheet-sub">테스트로 추가한 내역과 기간 설정이 사라지고 처음 상태(0원)로 돌아가요. "가맹점 자동분류 설정", "예산 설정", "기록" 탭의 월별 데이터는 그대로 유지돼요.</div>
     <div class="confirm-actions">
       <button type="button" class="confirm-btn cancel" id="resetCancelBtn">취소</button>
       <button type="button" class="confirm-btn danger" id="resetConfirmBtn">초기화</button>
@@ -605,14 +630,59 @@
     {merchant:'넷플릭스', amount:17000},
   ];
 
+  var RECORD_MONTHS = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'];
+
   function load(key, fallback){
     try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
     catch(e){ return fallback; }
   }
   function save(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
 
+  function buildHistorySeed(){
+    var merchantsByCat = {
+      food: ['김밥천국','새마을식당','본죽','명동교자','한솥도시락'],
+      cafe: ['스타벅스 강남점','이디야커피','메가커피','컴포즈커피'],
+      shopping: ['쿠팡','무신사','올리브영','다이소'],
+      transport: ['지하철 정기권','택시','카카오T'],
+      living: ['GS25 광교점','CU 편의점','다이소 생활관'],
+      culture: ['CGV','교보문고','넷플릭스'],
+      etc: ['정기구독 결제','알수없음 가맹점'],
+    };
+    var weights = {food:0.30, cafe:0.075, shopping:0.25, transport:0.10, living:0.075, culture:0.125, etc:0.075};
+    var seed = [];
+    var counter = 0;
+    RECORD_MONTHS.forEach(function(ym){
+      var year = parseInt(ym.slice(0,4), 10);
+      var month = parseInt(ym.slice(5,7), 10);
+      var daysInMonth = new Date(year, month, 0).getDate();
+      var monthTotal = 1800000 + Math.floor(Math.random() * 400000);
+      Object.keys(weights).forEach(function(cat){
+        var remaining = Math.round(monthTotal * weights[cat]);
+        var names = merchantsByCat[cat];
+        var txCount = 2 + Math.floor(Math.random() * 3);
+        for(var i = 0; i < txCount; i++){
+          var isLast = (i === txCount - 1);
+          var amount = isLast ? remaining : Math.round(remaining / (txCount - i) * (0.6 + Math.random() * 0.8));
+          amount = Math.max(1000, Math.round(amount / 100) * 100);
+          remaining -= amount;
+          var day = 1 + Math.floor(Math.random() * daysInMonth);
+          var hour = 8 + Math.floor(Math.random() * 14);
+          var minute = Math.floor(Math.random() * 60);
+          var dt = new Date(year, month - 1, day, hour, minute);
+          var merchant = names[Math.floor(Math.random() * names.length)];
+          seed.push({id:'hist-' + (counter++), merchant:merchant, amount:amount, category:cat, time:dt.toISOString()});
+        }
+      });
+    });
+    return seed;
+  }
+
   var merchantMap = load('ail_merchant_map', {});
   var transactions = load('ail_transactions', []);
+  if(!transactions.some(function(t){ return t.id.indexOf('hist-') === 0; })){
+    transactions = transactions.concat(buildHistorySeed());
+    save('ail_transactions', transactions);
+  }
   var cardCumulative = load('ail_cumulative', 0);
   var lastAlertIdx = -1;
 
@@ -875,6 +945,45 @@
     });
   }
 
+  function renderRecordsList(){
+    var list = document.getElementById('recordsList');
+    list.innerHTML = '';
+    RECORD_MONTHS.forEach(function(ym){
+      var year = parseInt(ym.slice(0,4), 10);
+      var month = parseInt(ym.slice(5,7), 10);
+      var start = new Date(year, month - 1, 1).getTime();
+      var end = new Date(year, month, 0, 23, 59, 59, 999).getTime();
+      var monthTx = transactions.filter(function(t){
+        var tm = new Date(t.time).getTime();
+        return tm >= start && tm <= end;
+      });
+      var total = monthTx.reduce(function(s,t){ return s+t.amount; }, 0);
+
+      var row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'record-item';
+      row.innerHTML =
+        '<div class="record-main">' +
+          '<div class="record-month">'+month+'월</div>' +
+          '<div class="record-count">'+monthTx.length+'건</div>' +
+        '</div>' +
+        '<div class="record-amount">'+won(total)+'</div>' +
+        '<span class="record-chevron">›</span>';
+      row.addEventListener('click', function(){
+        range = {
+          start: toDateInputValue(new Date(year, month - 1, 1)),
+          end: toDateInputValue(new Date(year, month, 0))
+        };
+        save('ail_range', range);
+        document.getElementById('rangeStart').value = range.start;
+        document.getElementById('rangeEnd').value = range.end;
+        renderTotalsAndChart();
+        showTab('home');
+      });
+      list.appendChild(row);
+    });
+  }
+
   function showToast(msg){
     var t = document.getElementById('toast');
     t.textContent = msg;
@@ -953,6 +1062,7 @@
     save('ail_transactions', transactions);
     renderTotalsAndChart();
     renderLedger();
+    renderRecordsList();
     var flashEl = document.querySelector('.ledger-item[data-id="'+tx.id+'"]');
     if(flashEl){
       flashEl.classList.add('flash');
@@ -1136,11 +1246,14 @@
 
   function showTab(name){
     document.getElementById('homeScreen').classList.toggle('hidden', name !== 'home');
+    document.getElementById('recordsScreen').classList.toggle('hidden', name !== 'records');
     document.getElementById('testScreen').classList.toggle('hidden', name !== 'test');
     document.getElementById('tabHomeBtn').classList.toggle('active', name === 'home');
+    document.getElementById('tabRecordsBtn').classList.toggle('active', name === 'records');
     document.getElementById('tabTestBtn').classList.toggle('active', name === 'test');
   }
   document.getElementById('tabHomeBtn').addEventListener('click', function(){ showTab('home'); });
+  document.getElementById('tabRecordsBtn').addEventListener('click', function(){ showTab('records'); });
   document.getElementById('tabTestBtn').addEventListener('click', function(){ showTab('test'); });
 
   function openBudgetSheet(){
@@ -1190,11 +1303,12 @@
     }
   });
   document.getElementById('resetConfirmBtn').addEventListener('click', function(){
-    ['ail_transactions','ail_cumulative','ail_range'].forEach(function(k){
+    ['ail_cumulative','ail_range'].forEach(function(k){
       localStorage.removeItem(k);
     });
 
-    transactions = [];
+    transactions = transactions.filter(function(t){ return t.id.indexOf('hist-') === 0; });
+    save('ail_transactions', transactions);
     lastAlertIdx = -1;
     cardCumulative = 0;
     range = defaultRange();
@@ -1214,6 +1328,7 @@
     renderTotalsAndChart();
     renderLedger();
     renderMerchantMapList();
+    renderRecordsList();
     showToast('초기화됐어요');
     showTab('home');
   });
@@ -1235,6 +1350,7 @@
   renderTotalsAndChart();
   renderLedger();
   renderMerchantMapList();
+  renderRecordsList();
 })();
 </script>
 </body>
