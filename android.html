@@ -436,7 +436,7 @@
 
         <div class="screen-pane hidden" id="recordsScreen">
           <div class="card">
-            <div class="section-title">월별 기록<span class="hint">2026년 1월 ~ 6월</span></div>
+            <div class="section-title">월별 기록<span class="hint" id="recordsRangeHint"></span></div>
             <div id="recordsList" style="margin-top:6px;"></div>
           </div>
           <p style="margin:2px 6px 0;font-size:12px;color:var(--text-faint);line-height:1.5;">월을 탭하면 홈 화면이 그 달 기간으로 바뀌어요.</p>
@@ -543,7 +543,27 @@
     {merchant:'넷플릭스', amount:17000},
   ];
 
-  var RECORD_MONTHS = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'];
+  var HISTORY_SEED_MONTHS = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'];
+
+  function computeRecordMonths(){
+    var months = HISTORY_SEED_MONTHS.slice();
+    var now = new Date();
+    var y = 2026, mo = 7;
+    while(y < now.getFullYear() || (y === now.getFullYear() && mo <= now.getMonth() + 1)){
+      months.push(y + '-' + String(mo).padStart(2,'0'));
+      mo++;
+      if(mo > 12){ mo = 1; y++; }
+    }
+    return months;
+  }
+  var RECORD_MONTHS = computeRecordMonths();
+
+  function monthsRangeLabel(){
+    var first = RECORD_MONTHS[0], last = RECORD_MONTHS[RECORD_MONTHS.length - 1];
+    var fy = first.slice(0,4), fm = parseInt(first.slice(5,7), 10);
+    var ly = last.slice(0,4), lm = parseInt(last.slice(5,7), 10);
+    return fy === ly ? (fy+'년 '+fm+'월 ~ '+lm+'월') : (fy+'년 '+fm+'월 ~ '+ly+'년 '+lm+'월');
+  }
 
   function load(key, fallback){
     try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
@@ -564,7 +584,7 @@
     var weights = {food:0.30, cafe:0.075, shopping:0.25, transport:0.10, living:0.075, culture:0.125, etc:0.075};
     var seed = [];
     var counter = 0;
-    RECORD_MONTHS.forEach(function(ym){
+    HISTORY_SEED_MONTHS.forEach(function(ym){
       var year = parseInt(ym.slice(0,4), 10);
       var month = parseInt(ym.slice(5,7), 10);
       var daysInMonth = new Date(year, month, 0).getDate();
@@ -860,6 +880,7 @@
 
   function renderRecordsList(){
     var list = document.getElementById('recordsList');
+    document.getElementById('recordsRangeHint').textContent = monthsRangeLabel();
     list.innerHTML = '';
     RECORD_MONTHS.forEach(function(ym){
       var year = parseInt(ym.slice(0,4), 10);
