@@ -813,8 +813,9 @@
 
   function renderLedger(){
     var list = document.getElementById('ledgerList');
-    var sorted = transactions.slice().sort(function(a,b){ return new Date(b.time)-new Date(a.time); }).slice(0, 10);
-    document.getElementById('ledgerCount').textContent = sorted.length ? '최근 '+sorted.length+'건' : '';
+    var inRange = txInRange();
+    var sorted = inRange.slice().sort(function(a,b){ return new Date(b.time)-new Date(a.time); }).slice(0, 10);
+    document.getElementById('ledgerCount').textContent = inRange.length ? '이 기간 '+inRange.length+'건' : '';
     list.innerHTML = '';
     if(!sorted.length){
       list.innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);padding:4px 2px;">아직 내역이 없어요. "테스트" 탭에서 현대카드 알림을 받아보세요.</div>';
