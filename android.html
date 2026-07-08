@@ -128,6 +128,11 @@
   }
   .range-reset:active{background-color:var(--surface-2);}
 
+  .hero-compare{font-size:12px;font-weight:600;margin-top:8px;}
+  .hero-compare.up{color:var(--danger);}
+  .hero-compare.down{color:var(--good);}
+  .hero-compare.flat{color:var(--text-faint);font-weight:500;}
+
   /* Budget */
   .hint-btn{
     background:none;border:none;color:var(--accent);font-size:11.5px;font-weight:700;
@@ -138,6 +143,10 @@
   .budget-row:first-child{margin-top:10px;}
   .budget-row-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;font-weight:600;margin-bottom:6px;}
   .budget-row-top .amt{font-variant-numeric:tabular-nums;color:var(--text-dim);}
+  .pace-warn{
+    margin-top:12px;padding:10px 12px;border-radius:12px;font-size:12px;line-height:1.5;
+    background:rgba(232,163,61,.14);color:var(--accent);font-weight:500;
+  }
   .budget-row-top .amt.over{color:var(--danger);font-weight:700;}
   .budget-track{height:8px;border-radius:5px;background:var(--surface-2);overflow:hidden;}
   .budget-fill{height:100%;border-radius:5px;width:0%;transition:width .5s ease;}
@@ -238,6 +247,13 @@
   }
 
   /* Ledger */
+  .ledger-search{
+    width:100%;box-sizing:border-box;margin-top:10px;
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+    border-radius:10px;padding:9px 12px;font-size:12.5px;font-family:inherit;
+  }
+  .ledger-search::placeholder{color:var(--text-faint);}
+  .ledger-search:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
   .ledger-list{display:flex;flex-direction:column;gap:2px;}
   .ledger-item{
     display:flex;align-items:center;gap:12px;padding:11px 4px;
@@ -414,6 +430,7 @@
           <div class="card">
             <div class="hero-label" id="heroLabel">총 지출</div>
             <div class="hero-amount" id="heroAmount">0원</div>
+            <div class="hero-compare" id="heroCompare"></div>
             <div class="range-control">
               <input type="date" class="range-input" id="rangeStart" aria-label="시작일">
               <span class="range-sep">~</span>
@@ -426,6 +443,7 @@
           <div class="card">
             <div class="section-title"><span id="budgetCardTitle">예산</span><button type="button" class="hint-btn" id="budgetSettingsBtn">설정</button></div>
             <div id="budgetSummary"></div>
+            <div id="budgetPace"></div>
           </div>
 
           <div class="card">
@@ -440,6 +458,7 @@
 
           <div class="card">
             <div class="section-title">가계부 내역<span class="hint" id="ledgerCount"></span></div>
+            <input type="text" class="ledger-search" id="ledgerSearch" placeholder="가맹점 또는 카테고리 검색">
             <div class="ledger-list" id="ledgerList" style="margin-top:10px;"></div>
           </div>
         </div>
@@ -756,6 +775,59 @@
     });
   }
 
+  function prevPeriodTotal(spanDays){
+    var prevEnd = new Date(parseDateInputValue(range.start).getTime() - 86400000);
+    var prevStart = new Date(prevEnd.getTime() - (spanDays - 1) * 86400000);
+    prevEnd.setHours(23,59,59,999);
+    var s = prevStart.getTime(), e = prevEnd.getTime();
+    return transactions.filter(function(t){
+      var tm = new Date(t.time).getTime();
+      return tm >= s && tm <= e;
+    }).reduce(function(sum,t){ return sum+t.amount; }, 0);
+  }
+
+  function renderCompare(total, spanDays){
+    var el = document.getElementById('heroCompare');
+    var prev = prevPeriodTotal(spanDays);
+    if(!prev){
+      el.textContent = '';
+      el.className = 'hero-compare';
+      return;
+    }
+    var diff = total - prev;
+    var pct = Math.round(Math.abs(diff) / prev * 100);
+    if(diff === 0){
+      el.textContent = '이전 기간과 지출이 같아요';
+      el.className = 'hero-compare flat';
+    } else if(diff > 0){
+      el.textContent = '이전 기간 대비 ▲' + pct + '% (' + won(diff) + ' 더 씀)';
+      el.className = 'hero-compare up';
+    } else {
+      el.textContent = '이전 기간 대비 ▼' + pct + '% (' + won(-diff) + ' 덜 씀)';
+      el.className = 'hero-compare down';
+    }
+  }
+
+  function renderBudgetPace(total){
+    var el = document.getElementById('budgetPace');
+    if(!el) return;
+    el.innerHTML = '';
+    var todayYm = cycleKeyForDate(new Date(), monthStartDay);
+    if(currentBudgetMonth() !== todayYm) return;
+    var budgets = getCurrentBudget();
+    if(!budgets.total || total >= budgets.total) return;
+    var bounds = cycleBounds(todayYm, monthStartDay);
+    var now = new Date();
+    var elapsedDays = Math.floor((now - bounds.start) / 86400000) + 1;
+    var totalDays = Math.round((bounds.end - bounds.start) / 86400000) + 1;
+    if(elapsedDays <= 0 || elapsedDays >= totalDays) return;
+    var projected = total / elapsedDays * totalDays;
+    if(projected > budgets.total){
+      var over = Math.round(projected - budgets.total);
+      el.innerHTML = '<div class="pace-warn">⚠️ 이 속도라면 ' + budgetMonthLabel() + ' 말에 예산을 약 ' + won(over) + ' 초과할 것으로 예상돼요.</div>';
+    }
+  }
+
   function renderTotalsAndChart(){
     var recent = txInRange();
     var total = recent.reduce(function(s,t){ return s+t.amount; }, 0);
@@ -766,6 +838,7 @@
     var spanDays = Math.round((parseDateInputValue(range.end) - parseDateInputValue(range.start)) / 86400000) + 1;
     document.getElementById('heroLabel').textContent = spanDays + '일간 총 지출';
     document.getElementById('chartHint').textContent = spanDays + '일간';
+    renderCompare(total, spanDays);
 
     var sums = {};
     CATEGORIES.forEach(function(c){ sums[c.key] = 0; });
@@ -809,6 +882,7 @@
     });
 
     renderBudgetCard(total, sums);
+    renderBudgetPace(total);
     renderInsights(total, sums);
   }
 
@@ -901,15 +975,25 @@
   }
 
   var ledgerShowAll = false;
+  var ledgerQuery = '';
 
   function renderLedger(){
     var list = document.getElementById('ledgerList');
     var inRange = txInRange();
-    var sorted = inRange.slice().sort(function(a,b){ return new Date(b.time)-new Date(a.time); });
-    document.getElementById('ledgerCount').textContent = inRange.length ? '이 기간 '+inRange.length+'건' : '';
+    var q = ledgerQuery.trim().toLowerCase();
+    var filtered = !q ? inRange : inRange.filter(function(t){
+      var c = catByKey[t.category] || catByKey.etc;
+      return t.merchant.toLowerCase().indexOf(q) !== -1 || c.label.toLowerCase().indexOf(q) !== -1;
+    });
+    var sorted = filtered.slice().sort(function(a,b){ return new Date(b.time)-new Date(a.time); });
+    document.getElementById('ledgerCount').textContent = q
+      ? '검색 결과 '+filtered.length+'건'
+      : (inRange.length ? '이 기간 '+inRange.length+'건' : '');
     list.innerHTML = '';
     if(!sorted.length){
-      list.innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);padding:4px 2px;">아직 내역이 없어요. "테스트" 탭에서 현대카드 알림을 받아보세요.</div>';
+      list.innerHTML = q
+        ? '<div style="font-size:12.5px;color:var(--text-faint);padding:4px 2px;">\''+ledgerQuery.trim()+'\'와 일치하는 내역이 없어요.</div>'
+        : '<div style="font-size:12.5px;color:var(--text-faint);padding:4px 2px;">아직 내역이 없어요. "테스트" 탭에서 현대카드 알림을 받아보세요.</div>';
       return;
     }
     var visible = ledgerShowAll ? sorted : sorted.slice(0, 10);
@@ -1266,6 +1350,11 @@
     renderTotalsAndChart();
     renderLedger();
   });
+  document.getElementById('ledgerSearch').addEventListener('input', function(){
+    ledgerQuery = this.value;
+    ledgerShowAll = false;
+    renderLedger();
+  });
 
   function showTab(name){
     document.getElementById('homeScreen').classList.toggle('hidden', name !== 'home');
@@ -1361,6 +1450,8 @@
     cardCumulative = 0;
     range = defaultRange();
     ledgerShowAll = false;
+    ledgerQuery = '';
+    document.getElementById('ledgerSearch').value = '';
 
     busy = false;
     document.getElementById('smsBtn').disabled = false;
