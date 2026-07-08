@@ -901,7 +901,7 @@
   function renderLedger(){
     var list = document.getElementById('ledgerList');
     var inRange = txInRange();
-    var sorted = inRange.slice().sort(function(a,b){ return new Date(b.time)-new Date(a.time); }).slice(0, 10);
+    var sorted = inRange.slice().sort(function(a,b){ return new Date(b.time)-new Date(a.time); });
     document.getElementById('ledgerCount').textContent = inRange.length ? '이 기간 '+inRange.length+'건' : '';
     list.innerHTML = '';
     if(!sorted.length){
