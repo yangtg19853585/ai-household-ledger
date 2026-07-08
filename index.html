@@ -173,11 +173,6 @@
   }
   .budget-input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .incoming-icon-warn{background:rgba(255,107,93,.16);border-color:rgba(255,107,93,.4);font-size:16px;}
-  .summary-track{
-    display:flex;height:9px;border-radius:6px;overflow:hidden;margin-top:16px;
-    background:var(--surface-2);gap:2px;
-  }
-  .summary-seg{height:100%;transition:width .6s cubic-bezier(.22,1,.36,1);}
 
   /* Section title */
   .section-title{font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:space-between;}
@@ -483,7 +478,6 @@
               <input type="date" class="range-input" id="rangeEnd" aria-label="종료일">
               <button type="button" class="range-reset" id="rangeResetBtn">최근 30일</button>
             </div>
-            <div class="summary-track" id="summaryTrack"></div>
           </div>
 
           <div class="card">
@@ -934,16 +928,6 @@
     var list = CATEGORIES.map(function(c){ return {c:c, amount: sums[c.key]||0}; })
       .filter(function(x){ return x.amount > 0; })
       .sort(function(a,b){ return b.amount - a.amount; });
-
-    var track = document.getElementById('summaryTrack');
-    track.innerHTML = '';
-    list.forEach(function(x){
-      var seg = document.createElement('div');
-      seg.className = 'summary-seg';
-      seg.style.background = x.c.color;
-      seg.style.width = (total ? (x.amount/total*100) : 0) + '%';
-      track.appendChild(seg);
-    });
 
     var max = list.length ? list[0].amount : 0;
     var rows = document.getElementById('chartRows');
