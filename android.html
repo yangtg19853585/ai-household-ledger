@@ -652,6 +652,21 @@
   var range = load('ail_range', null) || defaultRange();
   var budgetsByMonth = load('ail_budgets_by_month', {});
 
+  (function ensureHistoryBudgets(){
+    var defaults = {
+      total: 2000000,
+      byCategory: {food:600000, cafe:150000, shopping:500000, transport:200000, living:150000, culture:250000, etc:150000}
+    };
+    var changed = false;
+    HISTORY_SEED_MONTHS.forEach(function(ym){
+      if(!budgetsByMonth[ym]){
+        budgetsByMonth[ym] = JSON.parse(JSON.stringify(defaults));
+        changed = true;
+      }
+    });
+    if(changed) save('ail_budgets_by_month', budgetsByMonth);
+  })();
+
   function currentBudgetMonth(){ return range.end.slice(0, 7); }
   function getCurrentBudget(){ return budgetsByMonth[currentBudgetMonth()] || {total: null, byCategory: {}}; }
   function budgetMonthLabel(){ return parseInt(currentBudgetMonth().slice(5,7), 10) + '월'; }
