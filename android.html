@@ -430,7 +430,7 @@
           </div>
 
           <div class="card">
-            <div class="section-title">절약 인사이트<span class="hint">AI 분석</span></div>
+            <div class="section-title">절약 인사이트<span class="hint">한 줄 요약</span></div>
             <div id="insightsList"></div>
           </div>
 
@@ -800,7 +800,7 @@
   function renderInsights(total, sums){
     var list = document.getElementById('insightsList');
     var budgets = getCurrentBudget();
-    var tips = [];
+    var overs = [], nears = [];
 
     Object.keys(budgets.byCategory).forEach(function(key){
       var b = budgets.byCategory[key];
@@ -809,34 +809,44 @@
       var c = catByKey[key];
       if(!c) return;
       if(amt > b){
-        tips.push({level:'danger', text: c.label + ' 예산을 ' + won(amt - b) + ' 초과했어요. 줄여보는 건 어떨까요?'});
+        overs.push({c:c, over: amt - b});
       } else if(amt >= b * 0.8){
-        tips.push({level:'warn', text: c.label + ' 예산의 ' + Math.round(amt/b*100) + '%를 사용했어요. 남은 기간 동안 조절해보세요.'});
+        nears.push({c:c, pct: Math.round(amt/b*100)});
       }
     });
 
-    if(!tips.length && total > 0){
+    var tip;
+    if(overs.length){
+      overs.sort(function(a,b){ return b.over - a.over; });
+      var overLabels = overs.map(function(o){ return o.c.label; }).join('·');
+      tip = overs.length === 1
+        ? {level:'danger', text: overLabels + ' 예산을 ' + won(overs[0].over) + ' 초과했어요.'}
+        : {level:'danger', text: overLabels + ' 예산을 초과했어요.'};
+    } else if(nears.length){
+      nears.sort(function(a,b){ return b.pct - a.pct; });
+      var nearLabels = nears.map(function(n){ return n.c.label; }).join('·');
+      tip = nears.length === 1
+        ? {level:'warn', text: nearLabels + ' 예산의 ' + nears[0].pct + '%를 사용했어요.'}
+        : {level:'warn', text: nearLabels + ' 예산이 얼마 안 남았어요.'};
+    } else if(total > 0){
       var top = Object.keys(sums)
         .map(function(k){ return {key:k, amount: sums[k]}; })
         .sort(function(a,b){ return b.amount - a.amount; })[0];
       if(top && top.amount > 0 && (top.amount/total) >= 0.4){
         var c2 = catByKey[top.key];
-        tips.push({level:'info', text: '이번 기간 지출의 ' + Math.round(top.amount/total*100) + '%가 ' + c2.label + '에 몰려있어요.'});
+        tip = {level:'info', text: '이번 기간 지출의 ' + Math.round(top.amount/total*100) + '%가 ' + c2.label + '에 몰려있어요.'};
+      } else {
+        tip = {level:'info', text: '지출이 예산 안에서 잘 관리되고 있어요 👍'};
       }
+    } else {
+      tip = {level:'info', text: '아직 지출 데이터가 없어요.'};
     }
 
     list.innerHTML = '';
-    if(!tips.length){
-      var msg = total > 0 ? '지출이 예산 안에서 잘 관리되고 있어요 👍' : '아직 지출 데이터가 없어요.';
-      list.innerHTML = '<div class="insight-item info">'+msg+'</div>';
-      return;
-    }
-    tips.forEach(function(t){
-      var row = document.createElement('div');
-      row.className = 'insight-item ' + t.level;
-      row.textContent = t.text;
-      list.appendChild(row);
-    });
+    var row = document.createElement('div');
+    row.className = 'insight-item ' + tip.level;
+    row.textContent = tip.text;
+    list.appendChild(row);
   }
 
   var ledgerShowAll = false;
