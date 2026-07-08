@@ -442,10 +442,16 @@
 
         <div class="screen-pane hidden" id="recordsScreen">
           <div class="card">
-            <div class="section-title">월별 기록<span class="hint" id="recordsRangeHint"></span></div>
+            <div class="section-title">
+              <span>월별 기록</span>
+              <span style="display:flex;align-items:center;gap:8px;">
+                <span class="hint" id="recordsRangeHint"></span>
+                <button type="button" class="hint-btn" id="monthStartSettingsBtn">시작일</button>
+              </span>
+            </div>
             <div id="recordsList" style="margin-top:6px;"></div>
           </div>
-          <p style="margin:2px 6px 0;font-size:12px;color:var(--text-faint);line-height:1.5;">월을 탭하면 홈 화면이 그 달 기간으로 바뀌어요.</p>
+          <p style="margin:2px 6px 0;font-size:12px;color:var(--text-faint);line-height:1.5;">월을 탭하면 홈 화면이 그 기간으로 바뀌어요.</p>
         </div>
 
         <div class="screen-pane hidden" id="testScreen">
@@ -524,6 +530,19 @@
   </div>
 </div>
 
+<div class="sheet-overlay" id="monthStartSheetOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">월 시작일 설정</div>
+    <div class="sheet-sub">매달 며칠부터 한 달로 계산할지 정해요. 예: 25일로 설정하면 1월 25일 ~ 2월 24일이 "1월"이 돼요.</div>
+    <div class="budget-input-row">
+      <span class="budget-input-label">시작일</span>
+      <input type="number" inputmode="numeric" class="budget-input" id="monthStartInput" min="1" max="28" placeholder="1~28">
+    </div>
+    <button type="button" class="simulate-btn" id="monthStartSaveBtn" style="margin-top:16px;">저장</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -550,26 +569,6 @@
   ];
 
   var HISTORY_SEED_MONTHS = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'];
-
-  function computeRecordMonths(){
-    var months = HISTORY_SEED_MONTHS.slice();
-    var now = new Date();
-    var y = 2026, mo = 7;
-    while(y < now.getFullYear() || (y === now.getFullYear() && mo <= now.getMonth() + 1)){
-      months.push(y + '-' + String(mo).padStart(2,'0'));
-      mo++;
-      if(mo > 12){ mo = 1; y++; }
-    }
-    return months;
-  }
-  var RECORD_MONTHS = computeRecordMonths();
-
-  function monthsRangeLabel(){
-    var first = RECORD_MONTHS[0], last = RECORD_MONTHS[RECORD_MONTHS.length - 1];
-    var fy = first.slice(0,4), fm = parseInt(first.slice(5,7), 10);
-    var ly = last.slice(0,4), lm = parseInt(last.slice(5,7), 10);
-    return fy === ly ? (fy+'년 '+fm+'월 ~ '+lm+'월') : (fy+'년 '+fm+'월 ~ '+ly+'년 '+lm+'월');
-  }
 
   function load(key, fallback){
     try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
@@ -650,6 +649,54 @@
     return {start: toDateInputValue(start), end: toDateInputValue(end)};
   }
   var range = load('ail_range', null) || defaultRange();
+  var monthStartDay = load('ail_month_start_day', 1);
+
+  function cycleKeyForDate(d, startDay){
+    var y = d.getFullYear(), m = d.getMonth();
+    if(d.getDate() < startDay){
+      m -= 1;
+      if(m < 0){ m = 11; y -= 1; }
+    }
+    return y + '-' + String(m+1).padStart(2,'0');
+  }
+  function cycleBounds(ym, startDay){
+    var y = parseInt(ym.slice(0,4), 10), m1 = parseInt(ym.slice(5,7), 10);
+    var start = new Date(y, m1-1, startDay);
+    var nextStart = new Date(y, m1, startDay);
+    var end = new Date(nextStart.getTime() - 1);
+    return {start: start, end: end};
+  }
+  function cycleLabel(ym){
+    if(monthStartDay === 1){
+      return parseInt(ym.slice(5,7), 10) + '월';
+    }
+    var b = cycleBounds(ym, monthStartDay);
+    return (b.start.getMonth()+1) + '월 ' + b.start.getDate() + '일 ~ ' + (b.end.getMonth()+1) + '월 ' + b.end.getDate() + '일';
+  }
+
+  function computeRecordMonths(){
+    var months = HISTORY_SEED_MONTHS.slice();
+    var curKey = cycleKeyForDate(new Date(), monthStartDay);
+    if(months.indexOf(curKey) !== -1) return months;
+    var y = 2026, mo = 7;
+    for(var guard = 0; guard < 240; guard++){
+      var key = y + '-' + String(mo).padStart(2,'0');
+      if(months.indexOf(key) === -1) months.push(key);
+      if(key === curKey) break;
+      mo++;
+      if(mo > 12){ mo = 1; y++; }
+    }
+    return months;
+  }
+  var RECORD_MONTHS = computeRecordMonths();
+
+  function monthsRangeLabel(){
+    var first = RECORD_MONTHS[0], last = RECORD_MONTHS[RECORD_MONTHS.length - 1];
+    var fy = first.slice(0,4), fm = parseInt(first.slice(5,7), 10);
+    var ly = last.slice(0,4), lm = parseInt(last.slice(5,7), 10);
+    return fy === ly ? (fy+'년 '+fm+'월 ~ '+lm+'월') : (fy+'년 '+fm+'월 ~ '+ly+'년 '+lm+'월');
+  }
+
   var budgetsByMonth = load('ail_budgets_by_month', {});
 
   (function ensureHistoryBudgets(){
@@ -667,9 +714,9 @@
     if(changed) save('ail_budgets_by_month', budgetsByMonth);
   })();
 
-  function currentBudgetMonth(){ return range.end.slice(0, 7); }
+  function currentBudgetMonth(){ return cycleKeyForDate(parseDateInputValue(range.end), monthStartDay); }
   function getCurrentBudget(){ return budgetsByMonth[currentBudgetMonth()] || {total: null, byCategory: {}}; }
-  function budgetMonthLabel(){ return parseInt(currentBudgetMonth().slice(5,7), 10) + '월'; }
+  function budgetMonthLabel(){ return cycleLabel(currentBudgetMonth()); }
 
   function won(n){ return n.toLocaleString('ko-KR') + '원'; }
 
@@ -937,10 +984,9 @@
     document.getElementById('recordsRangeHint').textContent = monthsRangeLabel();
     list.innerHTML = '';
     RECORD_MONTHS.forEach(function(ym){
-      var year = parseInt(ym.slice(0,4), 10);
-      var month = parseInt(ym.slice(5,7), 10);
-      var start = new Date(year, month - 1, 1).getTime();
-      var end = new Date(year, month, 0, 23, 59, 59, 999).getTime();
+      var bounds = cycleBounds(ym, monthStartDay);
+      var start = bounds.start.getTime();
+      var end = bounds.end.getTime();
       var monthTx = transactions.filter(function(t){
         var tm = new Date(t.time).getTime();
         return tm >= start && tm <= end;
@@ -952,15 +998,15 @@
       row.className = 'record-item';
       row.innerHTML =
         '<div class="record-main">' +
-          '<div class="record-month">'+month+'월</div>' +
+          '<div class="record-month">'+cycleLabel(ym)+'</div>' +
           '<div class="record-count">'+monthTx.length+'건</div>' +
         '</div>' +
         '<div class="record-amount">'+won(total)+'</div>' +
         '<span class="record-chevron">›</span>';
       row.addEventListener('click', function(){
         range = {
-          start: toDateInputValue(new Date(year, month - 1, 1)),
-          end: toDateInputValue(new Date(year, month, 0))
+          start: toDateInputValue(bounds.start),
+          end: toDateInputValue(bounds.end)
         };
         save('ail_range', range);
         document.getElementById('rangeStart').value = range.start;
@@ -1046,9 +1092,10 @@
 
   function finalize(item, catKey){
     var now = new Date();
-    var ym = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-    var monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    var monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59, 999).getTime();
+    var ym = cycleKeyForDate(now, monthStartDay);
+    var bounds = cycleBounds(ym, monthStartDay);
+    var monthStart = bounds.start.getTime();
+    var monthEnd = bounds.end.getTime();
     var beforeTx = transactions.filter(function(t){
       var tm = new Date(t.time).getTime();
       return tm >= monthStart && tm <= monthEnd;
@@ -1264,6 +1311,28 @@
     document.getElementById('budgetSheetOverlay').classList.remove('open');
     renderTotalsAndChart();
     showToast(budgetMonthLabel() + ' 예산을 저장했어요');
+  });
+
+  document.getElementById('monthStartSettingsBtn').addEventListener('click', function(){
+    document.getElementById('monthStartInput').value = monthStartDay;
+    document.getElementById('monthStartSheetOverlay').classList.add('open');
+  });
+  document.getElementById('monthStartSheetOverlay').addEventListener('click', function(e){
+    if(e.target === document.getElementById('monthStartSheetOverlay')){
+      document.getElementById('monthStartSheetOverlay').classList.remove('open');
+    }
+  });
+  document.getElementById('monthStartSaveBtn').addEventListener('click', function(){
+    var v = parseInt(document.getElementById('monthStartInput').value, 10);
+    if(isNaN(v) || v < 1) v = 1;
+    if(v > 28) v = 28;
+    monthStartDay = v;
+    save('ail_month_start_day', monthStartDay);
+    RECORD_MONTHS = computeRecordMonths();
+    document.getElementById('monthStartSheetOverlay').classList.remove('open');
+    renderRecordsList();
+    renderTotalsAndChart();
+    showToast('월 시작일을 ' + monthStartDay + '일로 설정했어요');
   });
 
   document.getElementById('resetBtn').addEventListener('click', function(){
